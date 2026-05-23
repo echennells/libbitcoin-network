@@ -224,4 +224,102 @@ BOOST_AUTO_TEST_CASE(proxy__do_subscribe_stop__subscribed__expected)
     BOOST_REQUIRE(proxy_ptr->stopped());
 }
 
+// Bug N1: proxy::stop "force-terminate" path is unreachable.
+// ----------------------------------------------------------------------------
+// proxy.cpp comments (lines ~55-65) state that a graceful stop initiated by
+// error::websocket_closed will be force-terminated by a subsequent
+// proxy::stop(error::service_stopped), which is expected to invoke
+// socket::stop() and "terminate directly" an outstanding lazy_stop. In
+// practice this is not the case: socket::lazy_stop() sets stopped_ = true
+// synchronously, proxy::stopped() returns socket_->stopped(), and so the
+// subsequent proxy::stop() exits at its own `if (stopped()) return;` guard
+// before reaching the socket->stop() branch. The force-terminate is dead.
+//
+// These tests record which socket stop method is invoked by proxy::stop()
+// under each scenario, pinning the unreachable path. A fix that lets
+// service_stopped reach socket->stop() after a prior lazy_stop will trip the
+// third test (its `stops == 0u` assertion).
+
+class recording_socket
+  : public network::socket
+{
+public:
+    using network::socket::socket;
+
+    void lazy_stop() NOEXCEPT override
+    {
+        ++lazy_stops;
+        network::socket::lazy_stop();
+    }
+
+    void stop() NOEXCEPT override
+    {
+        ++stops;
+        network::socket::stop();
+    }
+
+    std::atomic<size_t> lazy_stops{ 0 };
+    std::atomic<size_t> stops{ 0 };
+};
+
+BOOST_AUTO_TEST_CASE(proxy__stop__websocket_closed__invokes_lazy_stop_only)
+{
+    const logger log{};
+    threadpool pool(1);
+    socket::parameters params{ .maximum_request = 42 };
+    auto socket_ptr = std::make_shared<recording_socket>(log, pool.service(), std::move(params));
+    auto proxy_ptr = std::make_shared<mock_proxy>(socket_ptr);
+
+    // Positive control: a graceful trigger reaches lazy_stop() and not stop().
+    proxy_ptr->stop(error::websocket_closed);
+
+    BOOST_REQUIRE_EQUAL(socket_ptr->lazy_stops.load(), 1u);
+    BOOST_REQUIRE_EQUAL(socket_ptr->stops.load(), 0u);
+    BOOST_REQUIRE(proxy_ptr->stopped());
+}
+
+BOOST_AUTO_TEST_CASE(proxy__stop__service_stopped_first__invokes_stop_only)
+{
+    const logger log{};
+    threadpool pool(1);
+    socket::parameters params{ .maximum_request = 42 };
+    auto socket_ptr = std::make_shared<recording_socket>(log, pool.service(), std::move(params));
+    auto proxy_ptr = std::make_shared<mock_proxy>(socket_ptr);
+
+    // Positive control: a non-graceful trigger reaches stop() and not lazy_stop().
+    proxy_ptr->stop(error::service_stopped);
+
+    BOOST_REQUIRE_EQUAL(socket_ptr->lazy_stops.load(), 0u);
+    BOOST_REQUIRE_EQUAL(socket_ptr->stops.load(), 1u);
+    BOOST_REQUIRE(proxy_ptr->stopped());
+}
+
+BOOST_AUTO_TEST_CASE(proxy__stop__service_stopped_after_websocket_closed__does_not_invoke_stop_bug_n1)
+{
+    const logger log{};
+    threadpool pool(1);
+    socket::parameters params{ .maximum_request = 42 };
+    auto socket_ptr = std::make_shared<recording_socket>(log, pool.service(), std::move(params));
+    auto proxy_ptr = std::make_shared<mock_proxy>(socket_ptr);
+
+    // First: graceful trigger -- sets socket_->stopped_ = true synchronously.
+    proxy_ptr->stop(error::websocket_closed);
+    BOOST_REQUIRE_EQUAL(socket_ptr->lazy_stops.load(), 1u);
+    BOOST_REQUIRE_EQUAL(socket_ptr->stops.load(), 0u);
+
+    // Then: the documented "force-terminate" call.
+    proxy_ptr->stop(error::service_stopped);
+
+    // BUG N1: per the proxy.cpp comments this second call should reach
+    // socket->stop() and force-terminate the outstanding lazy_stop. It does
+    // not -- proxy::stop()'s early `if (stopped()) return;` guard exits
+    // before the socket->stop() branch, because proxy::stopped() reflects
+    // the stopped_ flag that socket::lazy_stop() already set. A fix making
+    // the second call reach socket->stop() will change this to 1u and trip
+    // the assertion; this characterization test should then be updated to
+    // assert the corrected (reachable) behavior.
+    BOOST_REQUIRE_EQUAL(socket_ptr->lazy_stops.load(), 1u);
+    BOOST_REQUIRE_EQUAL(socket_ptr->stops.load(), 0u);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
