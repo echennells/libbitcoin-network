@@ -320,7 +320,7 @@ void channel_peer::handle_send(const code& ec, size_t,
     if (ec)
         stop(ec);
 
-    if (ec &&
+    if (payload && ec &&
         ec != error::peer_disconnect &&
         ec != error::operation_canceled &&
         ec != error::connect_failed)

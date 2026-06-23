@@ -65,19 +65,22 @@ public:
         const auto version = negotiated_version();
         const auto payload = serialize(message, magic, version);
 
-        LOGX("Sent " << heading::get_command(*payload) << " to ["
-            << endpoint() << "] (" << system::floored_subtract(payload->size(),
-            heading::command_size) << " bytes)");
-
         using namespace std::placeholders;
         count_handler complete = std::bind(&channel_peer::handle_send,
             shared_from_base<channel_peer>(),  _1, _2, payload,
             std::move(handler));
 
         if (!payload)
+        {
             complete(error::bad_alloc, {});
+        }
         else
+        {
+            LOGX("Sent " << heading::get_command(*payload) << " to ["
+                << endpoint() << "] (" << system::floored_subtract(payload->size(),
+                heading::command_size) << " bytes)");
             write({ payload->data(), payload->size() }, std::move(complete));
+        }
     }
 
     /// Construct a p2p channel to encapsulate and communicate on the socket.
