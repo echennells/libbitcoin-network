@@ -63,7 +63,10 @@ public:
         // TODO: move to serializer.
         const auto magic = settings().identifier;
         const auto version = negotiated_version();
+
+        // A constructed message is serializable.
         const auto payload = serialize(message, magic, version);
+        BC_ASSERT(payload);
 
         LOGX("Sent " << heading::get_command(*payload) << " to ["
             << endpoint() << "] (" << system::floored_subtract(payload->size(),
@@ -74,10 +77,7 @@ public:
             shared_from_base<channel_peer>(),  _1, _2, payload,
             std::move(handler));
 
-        if (!payload)
-            complete(error::bad_alloc, {});
-        else
-            write({ payload->data(), payload->size() }, std::move(complete));
+        write({ payload->data(), payload->size() }, std::move(complete));
     }
 
     /// Construct a p2p channel to encapsulate and communicate on the socket.
