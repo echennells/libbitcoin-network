@@ -118,5 +118,91 @@ BOOST_AUTO_TEST_CASE(http_body_writer__to_writer__file__constructs_file_writer)
 
 BOOST_AUTO_TEST_SUITE_END()
 
+// http::body::size (content_length framing)
+// ----------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_SUITE(http_body_size_tests)
+
+// Drive the variant body writer exactly as beast does, totaling emitted bytes.
+static size_t emitted_bytes(body::writer& writer)
+{
+    boost_code ec{};
+    writer.init(ec);
+    size_t total{};
+    for (;;)
+    {
+        const auto out = writer.get(ec);
+        if (ec || !out)
+            break;
+
+        total += boost::asio::buffer_size(out.get().first);
+        if (!out.get().second)
+            break;
+    }
+
+    return total;
+}
+
+BOOST_AUTO_TEST_CASE(http_body__size__empty__zero)
+{
+    body::value_type value{};
+    value = empty_body::value_type{};
+    BOOST_REQUIRE_EQUAL(body::size(value), 0u);
+}
+
+BOOST_AUTO_TEST_CASE(http_body__size__string__string_length)
+{
+    body::value_type value{};
+    value = string_body::value_type{ "hello" };
+    BOOST_REQUIRE_EQUAL(body::size(value), 5u);
+}
+
+BOOST_AUTO_TEST_CASE(http_body__size__json__matches_serialized_model)
+{
+    json_body::value_type json{};
+    json.model = boost::json::parse(R"({"jsonrpc":"2.0","result":42,"id":1})");
+    const auto expected = boost::json::serialize(json.model).size();
+
+    body::value_type value{};
+    value = std::move(json);
+    BOOST_REQUIRE_EQUAL(body::size(value), expected);
+}
+
+// Non-circular: size() must equal the bytes the writer actually emits, so
+// beast's content_length frame is correct.
+BOOST_AUTO_TEST_CASE(http_body__size__json__matches_writer_output)
+{
+    json_body::value_type json{};
+    json.model = boost::json::parse(R"({"jsonrpc":"2.0","result":42,"id":1})");
+
+    body::value_type value{};
+    value = std::move(json);
+    const auto sized = body::size(value);
+
+    message_header<false, fields> header{};
+    body::writer writer{ header, value };
+    BOOST_REQUIRE_EQUAL(sized, emitted_bytes(writer));
+}
+
+// The json-rpc writer appends a single '\n' terminator (the bitcoind RPC
+// response path); size() must include it so content_length is exact.
+BOOST_AUTO_TEST_CASE(http_body__size__rpc_response__matches_writer_output)
+{
+    network::rpc::response rpc_value{};
+    rpc_value.message.jsonrpc = network::rpc::version::v2;
+
+    body::value_type value{};
+    value = std::move(rpc_value);
+    const auto sized = body::size(value);
+
+    message_header<false, fields> header{};
+    body::writer writer{ header, value };
+    const auto emitted = emitted_bytes(writer);
+    BOOST_REQUIRE_GT(emitted, 0u);
+    BOOST_REQUIRE_EQUAL(sized, emitted);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 ////#endif // HAVE_SLOW_TESTS
 
