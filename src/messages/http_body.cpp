@@ -18,8 +18,11 @@
  */
 #include <bitcoin/network/messages/http_body.hpp>
 
+#include <cstdint>
 #include <variant>
+#include <boost/json.hpp>
 #include <bitcoin/network/define.hpp>
+#include <bitcoin/network/messages/messages.hpp>
 
 namespace libbitcoin {
 namespace network {
@@ -157,6 +160,95 @@ body::writer::out_buffer body::writer::get(boost_code& ec) NOEXCEPT
         }
     }, writer_);
 }
+
+// http::body::size
+// ----------------------------------------------------------------------------
+// Measuring json/json-rpc requires a serialization pass; the writer then
+// streams the body as usual. This forgoes streaming-only measurement but
+// yields the content_length that http clients require (chunked is rejected
+// by the rust jsonrpc crate and bitcoin-cli).
+
+BC_PUSH_WARNING(NO_THROW_IN_NOEXCEPT)
+
+namespace
+{
+    inline uint64_t json_size(const boost::json::value& model) NOEXCEPT
+    {
+        try
+        {
+            return boost::json::serialize(model).size();
+        }
+        catch (...)
+        {
+            return {};
+        }
+    }
+
+    template <typename Message>
+    inline uint64_t rpc_size(const Message& message) NOEXCEPT
+    {
+        try
+        {
+            // The json-rpc writer appends a single '\n' terminator.
+            const auto model = boost::json::value_from(message);
+            return boost::json::serialize(model).size() + 1u;
+        }
+        catch (...)
+        {
+            return {};
+        }
+    }
+}
+
+uint64_t body::size(const value_type& value) NOEXCEPT
+{
+    if (!value.has_value())
+        return {};
+
+    return std::visit(overload
+    {
+        [](const std::monostate&) NOEXCEPT -> uint64_t { return {}; },
+        [](const empty_value& body) NOEXCEPT -> uint64_t
+        {
+            return empty_body::size(body);
+        },
+        [](const data_value& body) NOEXCEPT -> uint64_t
+        {
+            return chunk_body::size(body);
+        },
+        [](const file_value& body) NOEXCEPT -> uint64_t
+        {
+            return file_body::size(body);
+        },
+        [](const span_value& body) NOEXCEPT -> uint64_t
+        {
+            return span_body::size(body);
+        },
+        [](const buffer_value&) NOEXCEPT -> uint64_t
+        {
+            // buffer_body is never assigned as a response body.
+            return {};
+        },
+        [](const string_value& body) NOEXCEPT -> uint64_t
+        {
+            return string_body::size(body);
+        },
+        [](const json_value& body) NOEXCEPT -> uint64_t
+        {
+            return json_size(body.model);
+        },
+        [](const rpc::request& body) NOEXCEPT -> uint64_t
+        {
+            return rpc_size(body.message);
+        },
+        [](const rpc::response& body) NOEXCEPT -> uint64_t
+        {
+            return rpc_size(body.message);
+        }
+    }, value.value());
+}
+
+BC_POP_WARNING()
 
 } // namespace http
 } // namespace network

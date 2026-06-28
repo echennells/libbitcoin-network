@@ -97,7 +97,6 @@ using body_value = std::variant
 /// reader or writer construction, and then passes all calls through to it.
 struct BCT_API body
 {
-    /// No size(), forces chunked encoding for all types.
     /// The pass-thru body(), reader populates in construct.
     struct value_type
     {
@@ -152,6 +151,14 @@ struct BCT_API body
     private:
         std::optional<body_value> inner_{};
     };
+
+    /// Defining size() causes beast to frame responses with a content_length
+    /// instead of chunked transfer-encoding. Sized inner bodies report their
+    /// length directly; json and json-rpc require a serialization pass to
+    /// measure (the writer then streams the body as before). http clients
+    /// such as the rust jsonrpc crate (ord, electrs) and bitcoin-cli reject
+    /// chunked responses.
+    static std::uint64_t size(const value_type& value) NOEXCEPT;
 
     class reader
     {
