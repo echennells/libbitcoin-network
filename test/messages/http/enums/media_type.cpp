@@ -348,6 +348,19 @@ BOOST_AUTO_TEST_CASE(media_type__content_media_type__not_found__default)
     BOOST_REQUIRE(content_media_type(";charset=utf-8") == media_type::unknown);
 }
 
+BOOST_AUTO_TEST_CASE(media_type__content_media_type__json_rpc__application_json)
+{
+    BOOST_REQUIRE(content_media_type("application/json-rpc") == media_type::application_json);
+    BOOST_REQUIRE(content_media_type("Application/JSON-RPC") == media_type::application_json);
+    BOOST_REQUIRE(content_media_type("application/json-rpc; charset=utf-8") == media_type::application_json);
+    BOOST_REQUIRE(content_media_type("application/json-rpc", media_type::font_woff) == media_type::application_json);
+}
+
+BOOST_AUTO_TEST_CASE(media_type__from_media_type__application_json__not_json_rpc)
+{
+    BOOST_REQUIRE_EQUAL(from_media_type(media_type::application_json), "application/json");
+}
+
 BOOST_AUTO_TEST_CASE(media_type__content_media_type__not_found_default__default)
 {
     BOOST_REQUIRE(content_media_type("", media_type::font_woff) == media_type::font_woff);

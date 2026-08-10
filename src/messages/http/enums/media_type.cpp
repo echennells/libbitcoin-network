@@ -32,6 +32,8 @@ namespace http {
 
 BC_PUSH_WARNING(NO_THROW_IN_NOEXCEPT)
 
+constexpr auto json_rpc_content_type = "application/json-rpc";
+
 using media_bimap = boost::bimap
 <
     boost::bimaps::set_of<media_type>, 
@@ -128,6 +130,12 @@ media_type content_media_type(const std::string_view& content_type,
         return default_;
 
     const auto type = system::ascii_to_lower(parts.front());
+
+    // bitcoind accepts this historical json-rpc content type, and clients
+    // send it. It is not mapped, as the map is bijective and also emits.
+    if (type == json_rpc_content_type)
+        return media_type::application_json;
+
     const auto found = media_map().right.find(type);
     return found == media_map().right.end() ? default_ : found->second;
 }
