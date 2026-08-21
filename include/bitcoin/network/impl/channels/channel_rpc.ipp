@@ -130,16 +130,26 @@ inline void CLASS::dispatch(const rpc::request_cptr& request) NOEXCEPT
         return;
     }
 
-    if (const auto code = dispatcher_.notify(request->message))
+    bool dispatched{};
+    if (const auto code = dispatcher_.notify(dispatched, request->message))
     {
         stop(code);
         return;
     }
 
     // A request without an id is a notification, which has no response, so
-    // the listener is restarted here rather than following a response.
+    // the listener is restarted here rather than following a response. An
+    // undispatched notification is dropped, since it cannot be answered.
     if (!request->message.id)
+    {
         receive();
+        return;
+    }
+
+    // A request that reaches no subscriber sends nothing, and the read is only
+    // restarted from handle_send, so the channel would stall (see receive).
+    if (!dispatched)
+        send_code(error::unexpected_method, [](const code&) NOEXCEPT {});
 }
 
 // request helpers

@@ -80,6 +80,51 @@ BOOST_AUTO_TEST_CASE(dispatcher__notify__no_subscriber__success)
     BOOST_REQUIRE_EQUAL(ec, error::success);
 }
 
+BOOST_AUTO_TEST_CASE(dispatcher__notify__no_subscriber__not_dispatched)
+{
+    distributor_mock instance{};
+    request_t request{};
+    request.method = "empty_method";
+    bool dispatched{ true };
+    const auto ec = instance.notify(dispatched, request);
+    instance.stop(error::service_stopped);
+    BOOST_REQUIRE_EQUAL(ec, error::success);
+    BOOST_REQUIRE(!dispatched);
+}
+
+BOOST_AUTO_TEST_CASE(dispatcher__notify__subscribed__dispatched)
+{
+    distributor_mock instance{};
+    bool called{};
+
+    instance.subscribe([&](const code&, mock_interface::empty_method) NOEXCEPT
+    {
+        called = true;
+        return true;
+    });
+
+    request_t request{};
+    request.method = "empty_method";
+    bool dispatched{};
+    const auto ec = instance.notify(dispatched, request);
+    instance.stop(error::service_stopped);
+    BOOST_REQUIRE_EQUAL(ec, error::success);
+    BOOST_REQUIRE(dispatched);
+    BOOST_REQUIRE(called);
+}
+
+BOOST_AUTO_TEST_CASE(dispatcher__notify__unknown_method__not_dispatched)
+{
+    distributor_mock instance{};
+    request_t request{};
+    request.method = "not_a_method";
+    bool dispatched{ true };
+    const auto ec = instance.notify(dispatched, request);
+    instance.stop(error::service_stopped);
+    BOOST_REQUIRE_EQUAL(ec, error::unexpected_method);
+    BOOST_REQUIRE(!dispatched);
+}
+
 BOOST_AUTO_TEST_CASE(dispatcher__subscribe__stopped__subscriber_stopped)
 {
     distributor_mock instance{};

@@ -58,6 +58,12 @@ public:
     /// Dispatch request to subscribed method handler(s).
     virtual inline code notify(const request_t& request) NOEXCEPT;
 
+    /// Dispatch, and obtain whether the method had a subscriber. Notify of an
+    /// empty subscriber list is a silent no-op, so a caller that must produce
+    /// a response cannot otherwise distinguish dispatch from non-dispatch.
+    virtual inline code notify(bool& dispatched,
+        const request_t& request) NOEXCEPT;
+
     /// Stop all subscribers with the given code.
     virtual inline void stop(const code& ec) NOEXCEPT;
 
@@ -94,7 +100,8 @@ private:
     /// -----------------------------------------------------------------------
 private:
     using parameters_t = params_option;
-    using notifier_t = std::function<code(dispatcher&, const parameters_t&)>;
+    using notifier_t = std::function<code(bool&, dispatcher&,
+        const parameters_t&)>;
     using notifiers_t = std::unordered_map<std::string, notifier_t>;
 
     template <typename Argument>
@@ -125,7 +132,7 @@ private:
     static inline code notify(subscriber_t<Method>& subscriber,
         const parameters_t& params, const names_t<Method>& names) NOEXCEPT;
     template <size_t Index>
-    static inline code functor(dispatcher& self,
+    static inline code functor(bool& dispatched, dispatcher& self,
         const parameters_t& params) NOEXCEPT;
     template <size_t ...Index>
     static inline constexpr notifiers_t make_notifiers(
