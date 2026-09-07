@@ -19,11 +19,11 @@
 #include <optional>
 #include "../test.hpp"
 
-BOOST_AUTO_TEST_SUITE(privacy_stream_tests)
+BOOST_AUTO_TEST_SUITE(p2ps_stream_tests)
 
-using v2_stream = network::privacy::stream;
-using v2_context = network::privacy::context;
-using tcp_socket = network::asio::socket;
+using v2_stream = network::p2ps::stream;
+using v2_context = network::p2ps::context;
+using peer_socket = network::asio::socket;
 using network::messages::peer::heading;
 namespace identifiers = network::messages::peer::identifiers;
 using system::data_chunk;
@@ -32,7 +32,7 @@ constexpr uint32_t mainnet = 0xd9b4bef9;
 
 // Establish a connected local socket pair on the given service.
 static void connect_pair(boost::asio::io_context& service,
-    tcp_socket& server, tcp_socket& client)
+    peer_socket& server, peer_socket& client)
 {
     boost::asio::ip::tcp::acceptor acceptor{ service,
         { boost::asio::ip::address_v4::loopback(), 0 } };
@@ -68,11 +68,11 @@ static data_chunk v1_frame(const std::string& command,
     return frame;
 }
 
-BOOST_AUTO_TEST_CASE(privacy_stream__handshake__v2_both_sides__frames_round_trip)
+BOOST_AUTO_TEST_CASE(p2ps_stream__handshake__v2_both_sides__frames_round_trip)
 {
     boost::asio::io_context service{};
-    tcp_socket server{ service };
-    tcp_socket client{ service };
+    peer_socket server{ service };
+    peer_socket client{ service };
     connect_pair(service, server, client);
 
     const v2_context configuration{ mainnet };
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(privacy_stream__handshake__v2_both_sides__frames_round_trip
         identifier = 0xff;
         command.clear();
         payload.clear();
-        constexpr auto maximum = network::privacy::cipher::maximum_content;
+        constexpr auto maximum = network::p2ps::cipher::maximum_content;
         stream.async_read_message(buffer, maximum, on_message);
     };
 
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(privacy_stream__handshake__v2_both_sides__frames_round_trip
     BOOST_REQUIRE_EQUAL(payload, inv_payload);
 }
 
-BOOST_AUTO_TEST_CASE(privacy_stream__detected_v1__version_prefix__true)
+BOOST_AUTO_TEST_CASE(p2ps_stream__detected_v1__version_prefix__true)
 {
     // A v1 peer opens with a version message.
     const auto payload = system::base16_chunk("00112233445566778899");
@@ -197,7 +197,7 @@ BOOST_AUTO_TEST_CASE(privacy_stream__detected_v1__version_prefix__true)
     BOOST_REQUIRE(v2_stream::detected_v1(prefix, mainnet));
 }
 
-BOOST_AUTO_TEST_CASE(privacy_stream__detected_v1__wrong_magic__false)
+BOOST_AUTO_TEST_CASE(p2ps_stream__detected_v1__wrong_magic__false)
 {
     const auto payload = system::base16_chunk("00112233445566778899");
     const auto version = v1_frame("version", payload);
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(privacy_stream__detected_v1__wrong_magic__false)
     BOOST_REQUIRE(!v2_stream::detected_v1(prefix, 0x0b110907));
 }
 
-BOOST_AUTO_TEST_CASE(privacy_stream__detected_v1__random_key__false)
+BOOST_AUTO_TEST_CASE(p2ps_stream__detected_v1__random_key__false)
 {
     // An ellswift key cannot match the version prefix.
     const data_chunk prefix(v2_stream::detection_size, 0x42);

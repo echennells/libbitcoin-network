@@ -52,7 +52,7 @@
     <Filter Include="src\net">
       <UniqueIdentifier>{D28FC18A-8B81-4247-0000-00000000000E}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\privacy">
+    <Filter Include="src\p2ps">
       <UniqueIdentifier>{D28FC18A-8B81-4247-0000-00000000000F}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\protocols">
@@ -109,6 +109,9 @@
     <Filter Include="src\ssl\wolfssl\wolfcrypt\test">
       <UniqueIdentifier>{D28FC18A-8B81-4247-0000-000000000003}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\zmtp">
+      <UniqueIdentifier>{D28FC18A-8B81-4247-0000-000000000004}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\test\async\desubscriber.cpp">
@@ -160,6 +163,9 @@
       <Filter>src\channels</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\test\config\address.cpp">
+      <Filter>src\config</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\test\config\address_type.cpp">
       <Filter>src\config</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\test\config\authority.cpp">
@@ -408,11 +414,11 @@
     <ClCompile Include="..\..\..\..\test\net\socket.cpp">
       <Filter>src\net</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\test\privacy\cipher.cpp">
-      <Filter>src\privacy</Filter>
+    <ClCompile Include="..\..\..\..\test\p2ps\cipher.cpp">
+      <Filter>src\p2ps</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\test\privacy\stream.cpp">
-      <Filter>src\privacy</Filter>
+    <ClCompile Include="..\..\..\..\test\p2ps\stream.cpp">
+      <Filter>src\p2ps</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\test\protocols\protocol.cpp">
       <Filter>src\protocols</Filter>
@@ -701,6 +707,18 @@
     </ClCompile>
     <ClCompile Include="..\..\..\..\test\test.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\test\zmtp\cipher.cpp">
+      <Filter>src\zmtp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\test\zmtp\proxy.cpp">
+      <Filter>src\zmtp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\test\zmtp\socket.cpp">
+      <Filter>src\zmtp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\test\zmtp\stream.cpp">
+      <Filter>src\zmtp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

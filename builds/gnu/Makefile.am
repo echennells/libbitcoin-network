@@ -132,8 +132,9 @@ src_libbitcoin_network_la_SOURCES = \
     ${srcdir}/../../src/net/socket_tcp.cpp \
     ${srcdir}/../../src/net/socket_wait.cpp \
     ${srcdir}/../../src/net/socket_ws.cpp \
-    ${srcdir}/../../src/privacy/cipher.cpp \
-    ${srcdir}/../../src/privacy/stream.cpp \
+    ${srcdir}/../../src/net/socket_zmtp.cpp \
+    ${srcdir}/../../src/p2ps/cipher.cpp \
+    ${srcdir}/../../src/p2ps/stream.cpp \
     ${srcdir}/../../src/protocols/protocol.cpp \
     ${srcdir}/../../src/protocols/protocol_address_in_209.cpp \
     ${srcdir}/../../src/protocols/protocol_address_out_209.cpp \
@@ -154,7 +155,10 @@ src_libbitcoin_network_la_SOURCES = \
     ${srcdir}/../../src/sessions/session_outbound.cpp \
     ${srcdir}/../../src/sessions/session_peer.cpp \
     ${srcdir}/../../src/sessions/session_seed.cpp \
-    ${srcdir}/../../src/sessions/session_server.cpp
+    ${srcdir}/../../src/sessions/session_server.cpp \
+    ${srcdir}/../../src/zmtp/cipher.cpp \
+    ${srcdir}/../../src/zmtp/context.cpp \
+    ${srcdir}/../../src/zmtp/stream.cpp
 
 if WITH_SSL
 
@@ -274,6 +278,7 @@ include_bitcoin_network_configdir = \
 
 include_bitcoin_network_config_HEADERS = \
     ${srcdir}/../../include/bitcoin/network/config/address.hpp \
+    ${srcdir}/../../include/bitcoin/network/config/address_type.hpp \
     ${srcdir}/../../include/bitcoin/network/config/authority.hpp \
     ${srcdir}/../../include/bitcoin/network/config/config.hpp \
     ${srcdir}/../../include/bitcoin/network/config/credential.hpp \
@@ -469,14 +474,14 @@ include_bitcoin_network_net_HEADERS = \
     ${srcdir}/../../include/bitcoin/network/net/proxy.hpp \
     ${srcdir}/../../include/bitcoin/network/net/socket.hpp
 
-include_bitcoin_network_privacydir = \
-    ${includedir}/bitcoin/network/privacy
+include_bitcoin_network_p2psdir = \
+    ${includedir}/bitcoin/network/p2ps
 
-include_bitcoin_network_privacy_HEADERS = \
-    ${srcdir}/../../include/bitcoin/network/privacy/cipher.hpp \
-    ${srcdir}/../../include/bitcoin/network/privacy/context.hpp \
-    ${srcdir}/../../include/bitcoin/network/privacy/privacy.hpp \
-    ${srcdir}/../../include/bitcoin/network/privacy/stream.hpp
+include_bitcoin_network_p2ps_HEADERS = \
+    ${srcdir}/../../include/bitcoin/network/p2ps/cipher.hpp \
+    ${srcdir}/../../include/bitcoin/network/p2ps/context.hpp \
+    ${srcdir}/../../include/bitcoin/network/p2ps/p2ps.hpp \
+    ${srcdir}/../../include/bitcoin/network/p2ps/stream.hpp
 
 include_bitcoin_network_protocolsdir = \
     ${includedir}/bitcoin/network/protocols
@@ -664,6 +669,16 @@ include_bitcoin_network_ssl_wolfssl_wolfcrypt_HEADERS = \
 
 endif WITH_SSL
 
+include_bitcoin_network_zmtpdir = \
+    ${includedir}/bitcoin/network/zmtp
+
+include_bitcoin_network_zmtp_HEADERS = \
+    ${srcdir}/../../include/bitcoin/network/zmtp/cipher.hpp \
+    ${srcdir}/../../include/bitcoin/network/zmtp/context.hpp \
+    ${srcdir}/../../include/bitcoin/network/zmtp/role.hpp \
+    ${srcdir}/../../include/bitcoin/network/zmtp/stream.hpp \
+    ${srcdir}/../../include/bitcoin/network/zmtp/zmtp.hpp
+
 # Tests.
 #==============================================================================
 # Target test 'test/libbitcoin-network-test'
@@ -714,6 +729,7 @@ test_libbitcoin_network_test_SOURCES = \
     ${srcdir}/../../test/channels/channel_peer.cpp \
     ${srcdir}/../../test/channels/channel_rpc.cpp \
     ${srcdir}/../../test/config/address.cpp \
+    ${srcdir}/../../test/config/address_type.cpp \
     ${srcdir}/../../test/config/authority.cpp \
     ${srcdir}/../../test/config/credential.cpp \
     ${srcdir}/../../test/config/endpoint.cpp \
@@ -792,8 +808,8 @@ test_libbitcoin_network_test_SOURCES = \
     ${srcdir}/../../test/net/hosts.cpp \
     ${srcdir}/../../test/net/proxy.cpp \
     ${srcdir}/../../test/net/socket.cpp \
-    ${srcdir}/../../test/privacy/cipher.cpp \
-    ${srcdir}/../../test/privacy/stream.cpp \
+    ${srcdir}/../../test/p2ps/cipher.cpp \
+    ${srcdir}/../../test/p2ps/stream.cpp \
     ${srcdir}/../../test/protocols/protocol.cpp \
     ${srcdir}/../../test/protocols/protocol_address_in_209.cpp \
     ${srcdir}/../../test/protocols/protocol_address_out_209.cpp \
@@ -815,7 +831,11 @@ test_libbitcoin_network_test_SOURCES = \
     ${srcdir}/../../test/sessions/session_outbound.cpp \
     ${srcdir}/../../test/sessions/session_seed.cpp \
     ${srcdir}/../../test/sessions/session_server.cpp \
-    ${srcdir}/../../test/ssl/wolfssl.cpp
+    ${srcdir}/../../test/ssl/wolfssl.cpp \
+    ${srcdir}/../../test/zmtp/cipher.cpp \
+    ${srcdir}/../../test/zmtp/proxy.cpp \
+    ${srcdir}/../../test/zmtp/socket.cpp \
+    ${srcdir}/../../test/zmtp/stream.cpp
 
 if WITH_SSL
 

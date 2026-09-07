@@ -21,8 +21,6 @@
 
 #include <any>
 #include <tuple>
-#include <utility>
-#include <variant>
 #include <bitcoin/network/define.hpp>
 #include <bitcoin/network/messages/rpc/enums/grouping.hpp>
 #include <bitcoin/network/messages/rpc/method.hpp>
@@ -41,7 +39,7 @@ inline external_t<Argument> CLASS::get_missing() THROWS
 {
     if constexpr (is_required<Argument>)
         throw std::system_error{ error::missing_parameter };
-    else if constexpr (is_optional<Argument>)
+    else if constexpr (is_defaulted<Argument>)
         return Argument::default_value();
     else
         return external_t<Argument>{};
@@ -51,7 +49,9 @@ TEMPLATE
 template <typename Argument>
 inline external_t<Argument> CLASS::get_nullified() THROWS
 {
-    if constexpr (!is_nullable<Argument>)
+    if constexpr (is_nullopt<Argument>)
+        return Argument::default_value();
+    else if constexpr (!is_nullable<Argument>)
         throw std::system_error{ error::missing_parameter };
     else
         return external_t<Argument>{};
@@ -88,7 +88,7 @@ inline external_t<Argument> CLASS::get_positional(size_t& position,
     // Get contained variant value_t(inner_t).
     const auto& internal = array.at(position++);
 
-    // value_t(null_t) implies nullable.
+    // value_t(null_t) implies nullable or nullopt.
     if (std::holds_alternative<null_t>(internal.value()))
         return CLASS::get_nullified<Argument>();
 
@@ -109,7 +109,7 @@ inline external_t<Argument> CLASS::get_named(
     // Get contained variant value_t(inner_t).
     const auto& internal = it->second;
 
-    // value_t(null_t) implies nullable.
+    // value_t(null_t) implies nullable or nullopt.
     if (std::holds_alternative<null_t>(internal.value()))
         return CLASS::get_nullified<Argument>();
 

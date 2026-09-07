@@ -18,7 +18,6 @@
  */
 #include <bitcoin/network/net/proxy.hpp>
 
-#include <utility>
 #include <bitcoin/network/define.hpp>
 #include <bitcoin/network/log/log.hpp>
 #include <bitcoin/network/messages/messages.hpp>
@@ -40,11 +39,27 @@ using namespace std::placeholders;
 
 void proxy::wait(result_handler&& handler) NOEXCEPT
 {
+    BC_ASSERT(stranded());
+
+    if (canceler_)
+    {
+        canceler_ = {};
+        return;
+    }
+
     socket_->wait(std::move(handler));
 }
 
 void proxy::cancel(result_handler&& handler) NOEXCEPT
 {
+    BC_ASSERT(stranded());
+
+    if (writing_)
+    {
+        canceler_ = std::move(handler);
+        return;
+    }
+
     socket_->cancel(std::move(handler));
 }
 
@@ -150,6 +165,19 @@ void proxy::do_peer_write(const frame_ptr& message,
 // close part and re-arming the read), and defers notifications while open.
 
 // flat_buffer must have configured max_size, which will be allocated.
+// The PING context is the second param (the first is the TTL).
+static rpc::value_t to_context(const rpc::params_option& params) NOEXCEPT
+{
+    if (params && std::holds_alternative<rpc::array_t>(*params))
+    {
+        const auto& values = std::get<rpc::array_t>(*params);
+        if (values.size() > one)
+            return values.at(one);
+    }
+
+    return rpc::null_t{};
+}
+
 void proxy::read(http::flat_buffer& buffer, rpc::request& request,
     count_handler&& handler) NOEXCEPT
 {
@@ -180,6 +208,40 @@ void proxy::handle_rpc_read(const code& ec, size_t bytes,
     }
 
     auto& value = request.get();
+
+    // ZMTP control (the channel is keepalive-blind): a PING is answered with
+    // a PONG through the write queue and the read re-armed, a PONG is
+    // dropped and the read re-armed (the channel read handler stays pending).
+    if (socket_->zeromq())
+    {
+        auto& message = value.message;
+        const auto ping = (message.method == "ping");
+        if (ping || message.method == "pong")
+        {
+            if (ping)
+            {
+                const auto pong = to_shared<rpc::request>();
+                pong->message.method = "pong";
+                pong->message.params = rpc::array_t
+                {
+                    to_context(message.params)
+                };
+
+                const count_handler ignore =
+                    [](const code&, size_t) NOEXCEPT {};
+                do_write(std::bind(&proxy::do_notification_write,
+                    shared_from_this(), pong, ignore));
+            }
+
+            socket_->rpc_read(buffer.get(), value,
+                std::bind(&proxy::handle_rpc_read,
+                    shared_from_this(), _1, _2, request, buffer, handler));
+            return;
+        }
+
+        handler(ec, bytes);
+        return;
+    }
 
     // Batch open rides along with the first element (message delivered).
     if (value.changed && !value.batch)
@@ -549,6 +611,13 @@ void proxy::do_http_write(const http::response_ptr& response,
         metered(std::bind(&proxy::handle_write,
             shared_from_this(), _1, _2, handler)));
 }
+
+// ZMTP (TCP: publisher).
+// ----------------------------------------------------------------------------
+// Keepalive absorption: the channel is keepalive-blind. PING is answered
+// with a PONG through the write queue and the read re-armed (as the rpc
+// batch close is absorbed above). Every other frame is delivered; the
+// subscription protocol is the channel's concern.
 
 BC_POP_WARNING()
 BC_POP_WARNING()

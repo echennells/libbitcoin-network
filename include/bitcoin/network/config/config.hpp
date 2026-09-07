@@ -20,6 +20,7 @@
 #define LIBBITCOIN_NETWORK_CONFIG_CONFIG_HPP
 
 #include <bitcoin/network/config/address.hpp>
+#include <bitcoin/network/config/address_type.hpp>
 #include <bitcoin/network/config/authority.hpp>
 #include <bitcoin/network/config/credential.hpp>
 #include <bitcoin/network/config/endpoint.hpp>

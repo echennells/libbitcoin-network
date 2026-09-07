@@ -19,7 +19,6 @@
 #ifndef LIBBITCOIN_NETWORK_CHANNELS_CHANNEL_RPC_HPP
 #define LIBBITCOIN_NETWORK_CHANNELS_CHANNEL_RPC_HPP
 
-#include <memory>
 #include <bitcoin/network/channels/channel.hpp>
 #include <bitcoin/network/define.hpp>
 #include <bitcoin/network/log/log.hpp>
@@ -38,7 +37,7 @@ class channel_rpc
 {
 public:
     typedef std::shared_ptr<channel_rpc> ptr;
-    using options_t = network::settings::tls_server;
+    using options_t = network::settings::tcp_server;
     using dispatcher = rpc::dispatcher<Interface>;
 
     /// Subscribe to request from client (requires strand).

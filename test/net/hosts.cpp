@@ -199,6 +199,99 @@ BOOST_AUTO_TEST_CASE(hosts__count__empty__zero)
     BOOST_REQUIRE_EQUAL(instance.count(), 0u);
 }
 
+// counts
+
+constexpr auto ipv4_index = to_value(config::address_type::ipv4);
+constexpr auto ipv6_index = to_value(config::address_type::ipv6);
+constexpr ip_address mapped_ip_address =
+{
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x01
+};
+constexpr address_item mapped42{ 0, 0, mapped_ip_address, 42 };
+
+BOOST_AUTO_TEST_CASE(hosts__counts__empty__zeros)
+{
+    const logger log{};
+    mock_settings set(bc::system::chain::selection::mainnet);
+    const hosts instance(set, log);
+    BOOST_REQUIRE(instance.counts() == config::address_counts{});
+}
+
+BOOST_AUTO_TEST_CASE(hosts__counts__mixed_take_stop__expected)
+{
+    const logger log{};
+    mock_settings set(bc::system::chain::selection::mainnet);
+    set.path = TEST_NAME;
+    set.outbound.host_pool_capacity = 42;
+    hosts instance(set, log);
+    BOOST_REQUIRE_EQUAL(instance.start(), error::success);
+
+    std::promise<code> promise_v6{};
+    instance.restore(system::to_shared(loopback42), [&](const code& ec) NOEXCEPT
+    {
+        promise_v6.set_value(ec);
+    });
+
+    BOOST_REQUIRE_EQUAL(promise_v6.get_future().get(), error::success);
+
+    std::promise<code> promise_v4{};
+    instance.restore(system::to_shared(mapped42), [&](const code& ec) NOEXCEPT
+    {
+        promise_v4.set_value(ec);
+    });
+
+    BOOST_REQUIRE_EQUAL(promise_v4.get_future().get(), error::success);
+
+    auto counts = instance.counts();
+    BOOST_REQUIRE_EQUAL(counts.at(ipv4_index), 1u);
+    BOOST_REQUIRE_EQUAL(counts.at(ipv6_index), 1u);
+    BOOST_REQUIRE_EQUAL(instance.count(), 2u);
+
+    std::promise<std::pair<code, address_item_cptr>> promise_take{};
+    instance.take([&](const code& ec, const address_item_cptr& item) NOEXCEPT
+    {
+        promise_take.set_value({ ec, item });
+    });
+
+    BOOST_REQUIRE_EQUAL(promise_take.get_future().get().first, error::success);
+
+    counts = instance.counts();
+    BOOST_REQUIRE_EQUAL(counts.at(ipv4_index) + counts.at(ipv6_index), 1u);
+    BOOST_REQUIRE_EQUAL(instance.count(), 1u);
+
+    instance.stop();
+    counts = instance.counts();
+    BOOST_REQUIRE_EQUAL(counts.at(ipv4_index), 0u);
+    BOOST_REQUIRE_EQUAL(counts.at(ipv6_index), 0u);
+}
+
+BOOST_AUTO_TEST_CASE(hosts__counts__eviction__expected)
+{
+    const logger log{};
+    mock_settings set(bc::system::chain::selection::mainnet);
+    set.path = TEST_NAME;
+    set.outbound.host_pool_capacity = 2;
+    hosts instance(set, log);
+    BOOST_REQUIRE_EQUAL(instance.start(), error::success);
+
+    const auto message = system::to_shared(address{ { host1, host2, host3 } });
+    std::promise<code> promise_save{};
+    instance.save(message, [&](const code& ec, size_t) NOEXCEPT
+    {
+        promise_save.set_value(ec);
+    });
+
+    BOOST_REQUIRE_EQUAL(promise_save.get_future().get(), error::success);
+
+    // Push into the full buffer evicts the oldest, count remains capacity.
+    const auto counts = instance.counts();
+    BOOST_REQUIRE_EQUAL(counts.at(ipv6_index), 2u);
+    BOOST_REQUIRE_EQUAL(instance.count(), 2u);
+
+    instance.stop();
+}
+
 // take
 
 BOOST_AUTO_TEST_CASE(hosts__take__empty__address_not_found)

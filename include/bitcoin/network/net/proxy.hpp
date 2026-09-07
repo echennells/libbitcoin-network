@@ -21,8 +21,6 @@
 
 #include <atomic>
 #include <deque>
-#include <memory>
-#include <utility>
 #include <bitcoin/network/async/async.hpp>
 #include <bitcoin/network/config/config.hpp>
 #include <bitcoin/network/define.hpp>
@@ -149,7 +147,7 @@ protected:
     /// Wait on a peer close/cancel/send, no data capture/loss.
     virtual void wait(result_handler&& handler) NOEXCEPT;
 
-    /// Cancel wait or any asynchronous read/write operation, handlers posted.
+    /// Cancel wait, deferred past any write in flight, handler posted.
     virtual void cancel(result_handler&& handler) NOEXCEPT;
 
     /// WS (generic, framed).
@@ -299,7 +297,9 @@ private:
     deadline::ptr throttle_;
     stop_subscriber stop_subscriber_{};
     socket::http_parser_ptr parser_{};
+    result_handler canceler_{};
     queue deferred_{};
+    bool writing_{};
     queue queue_{};
     bool parted_{};
     bool batched_{};

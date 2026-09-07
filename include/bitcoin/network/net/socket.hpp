@@ -20,17 +20,16 @@
 #define LIBBITCOIN_NETWORK_NET_SOCKET_HPP
 
 #include <atomic>
-#include <memory>
 #include <optional>
 #include <span>
-#include <variant>
 #include <bitcoin/network/async/async.hpp>
 #include <bitcoin/network/config/config.hpp>
 #include <bitcoin/network/define.hpp>
 #include <bitcoin/network/log/log.hpp>
 #include <bitcoin/network/net/deadline.hpp>
-#include <bitcoin/network/privacy/context.hpp>
-#include <bitcoin/network/privacy/stream.hpp>
+#include <bitcoin/network/p2ps/p2ps.hpp>
+#include <bitcoin/network/settings.hpp>
+#include <bitcoin/network/zmtp/zmtp.hpp>
 
 namespace libbitcoin {
 namespace network {
@@ -45,13 +44,8 @@ class BCT_API socket
 public:
     typedef std::shared_ptr<socket> ptr;
 
-    // TODO: zmq::context.
-    using context = std::variant
-    <
-        std::monostate,
-        ref<asio::ssl::context>,
-        ref<const privacy::context>
-    >;
+    using context = settings::transport;
+    using parts_t = std::vector<zmtp::stream::frame>;
 
     struct parameters
     {
@@ -60,6 +54,7 @@ public:
         duration connect_timeout{};
         size_t maximum_request{};
         socket::context context{};
+        zmtp::role role{};
     };
 
     /// Construct.
@@ -158,7 +153,7 @@ public:
     virtual void peer_write(messages::peer::frame&& message,
         count_handler&& handler) NOEXCEPT;
 
-    /// RPC (TCP: electrum/stratum_v1, WS: btcd).
+    /// RPC (TCP: electrum/stratum_v1, WS: btcd, ZMTP: by socket role).
     /// -----------------------------------------------------------------------
 
     /// Read rpc request from the socket, handler posted to socket strand.
@@ -251,6 +246,9 @@ public:
     /// The socket was upgraded to p2ps (the peer is v2).
     virtual bool encrypted() const NOEXCEPT;
 
+    /// The socket was upgraded to native ZMTP (in its role).
+    virtual bool zeromq() const NOEXCEPT;
+
     /// The socket was upgraded to a websocket.
     virtual bool websocket() const NOEXCEPT;
 
@@ -267,7 +265,7 @@ protected:
     using ws_t = std::variant<ref<ws::socket>, ref<ws::ssl::socket>>;
     using tcp_t = std::variant<ref<asio::socket>, ref<asio::ssl::socket>>;
     using socket_t = std::variant<asio::socket, asio::ssl::socket, ws::socket,
-        ws::ssl::socket, privacy::stream>;
+        ws::ssl::socket, p2ps::stream, zmtp::stream>;
 
     /// Construct.
     /// -----------------------------------------------------------------------
@@ -287,7 +285,8 @@ protected:
     tcp_t get_tcp() NOEXCEPT;
     asio::socket& get_base() NOEXCEPT;
     asio::ssl::socket& get_ssl() NOEXCEPT;
-    privacy::stream& get_p2ps() NOEXCEPT;
+    p2ps::stream& get_p2ps() NOEXCEPT;
+    zmtp::stream& get_zmtp() NOEXCEPT;
 
     /// Variant (ws vs. tcp) helpers (protected by strand).
     /// -----------------------------------------------------------------------
@@ -319,6 +318,22 @@ private:
         system::data_chunk& payload;
         system::data_array<messages::peer::heading::size()> head{};
         bool headed{};
+    };
+
+    struct zmtp_read_state
+    {
+        typedef std::shared_ptr<zmtp_read_state> ptr;
+
+        zmtp_read_state(rpc::request& request,
+            http::flat_buffer& buffer) NOEXCEPT
+          : out{ request }, buffer{ buffer }
+        {
+        }
+
+        rpc::request& out;
+        http::flat_buffer& buffer;
+        parts_t parts{};
+        size_t total{};
     };
 
     struct read_state
@@ -438,6 +453,25 @@ private:
     void do_tcp_read(const asio::mutable_buffer& out,
         const count_handler& handler) NOEXCEPT;
 
+    // rpc (transport selection)
+    void do_rpc_read(const ref<http::flat_buffer>& buffer,
+        const ref<rpc::request>& request,
+        const count_handler& handler) NOEXCEPT;
+    void do_rpc_write(const rpc::response_ptr& response,
+        const count_handler& handler) NOEXCEPT;
+    void do_rpc_notify(const rpc::request_ptr& notification,
+        const count_handler& handler) NOEXCEPT;
+
+    // zmtp (rpc by role)
+    void do_zmtp_read(const zmtp_read_state::ptr& in,
+        const count_handler& handler) NOEXCEPT;
+    void do_zmtp_notify(const rpc::request_ptr& out,
+        const count_handler& handler) NOEXCEPT;
+    void do_zmtp_response(const rpc::response_ptr& out,
+        const count_handler& handler) NOEXCEPT;
+    void do_zmtp_write(const system::chunk_ptr& packet,
+        const count_handler& handler) NOEXCEPT;
+
     // peer
     void do_peer_read(size_t total, const peer_state::ptr& in,
         const count_handler& handler) NOEXCEPT;
@@ -495,6 +529,8 @@ private:
         const result_handler& handler) NOEXCEPT;
     void handle_encrypted_handshake(const boost_code& ec,
         const result_handler& handler) NOEXCEPT;
+    void handle_publisher_handshake(const boost_code& ec,
+        const result_handler& handler) NOEXCEPT;
 
     // read/write (tcp/ws)
     void handle_async(const boost_code& ec, size_t size,
@@ -513,6 +549,10 @@ private:
     void handle_rpc_read(const code& ec, size_t bytes,
         const ref<rpc::request>& out, const http::request_ptr& in,
         const count_handler& handler) NOEXCEPT;
+
+    // zmtp
+    void handle_zmtp_read(const boost_code& ec, size_t size,
+        const zmtp_read_state::ptr& in, const count_handler& handler) NOEXCEPT;
 
     // body
     void handle_body_read(const code& ec, size_t size, size_t total,
@@ -555,6 +595,7 @@ protected:
     asio::strand strand_;
     asio::context& service_;
     const context context_;
+    const zmtp::role role_;
     std::atomic_bool stopped_{};
     std::atomic_bool websocket_{};
 
@@ -565,7 +606,7 @@ protected:
     socket_t socket_;
 
     // Retains the detection prefix for a v1 peer (see handle_detection).
-    http::flat_buffer detection_{ privacy::stream::detection_size };
+    http::flat_buffer detection_{ p2ps::stream::detection_size };
 };
 
 typedef std::function<void(const code&, const socket::ptr&)> socket_handler;

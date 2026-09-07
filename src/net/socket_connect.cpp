@@ -18,8 +18,6 @@
  */
 #include <bitcoin/network/net/socket.hpp>
 
-#include <utility>
-#include <variant>
 #include <bitcoin/network/config/config.hpp>
 #include <bitcoin/network/define.hpp>
 #include <bitcoin/network/log/log.hpp>
@@ -45,8 +43,7 @@ BC_PUSH_WARNING(NO_THROW_IN_NOEXCEPT)
 void socket::accept(asio::acceptor& acceptor,
     result_handler&& handler) NOEXCEPT
 {
-    BC_ASSERT_MSG(!get_base().is_open(),
-        "accept on open socket");
+    BC_ASSERT_MSG(!get_base().is_open(), "accept on open socket");
     try
     {
         // Dispatches on the acceptor's strand (which should be network).
@@ -113,8 +110,7 @@ void socket::do_connect(const asio::endpoints& range,
 {
     BC_ASSERT(stranded());
     BC_ASSERT_MSG(!websocket(), "socket is upgraded");
-    BC_ASSERT_MSG(!get_base().is_open(),
-        "connect on open socket");
+    BC_ASSERT_MSG(!get_base().is_open(), "connect on open socket");
 
     try
     {
@@ -179,13 +175,13 @@ void socket::do_handshake(const result_handler& handler) NOEXCEPT
 {
     ////BC_ASSERT(stranded());
 
-    if (std::holds_alternative<cref<privacy::context>>(context_))
+    if (std::holds_alternative<cref<p2ps::context>>(context_))
     {
         // The accepted peer is detected as v1 or v2 before upgrade.
         if (inbound_)
         {
             boost::asio::async_read(get_base(),
-                detection_.prepare(privacy::stream::detection_size),
+                detection_.prepare(p2ps::stream::detection_size),
                 std::bind(&socket::handle_detection,
                     shared_from_this(), _1, handler));
             return;
@@ -195,12 +191,28 @@ void socket::do_handshake(const result_handler& handler) NOEXCEPT
         auto socket = std::move(get_base());
 
         // P2PS (bip324) context is applied to the socket.
-        socket_.emplace<privacy::stream>(std::move(socket),
-            std::get<cref<privacy::context>>(context_).get());
+        socket_.emplace<p2ps::stream>(std::move(socket),
+            std::get<cref<p2ps::context>>(context_).get());
 
         // Posts handler to socket strand.
         get_p2ps().async_handshake(
             std::bind(&socket::handle_encrypted_handshake,
+                shared_from_this(), _1, handler));
+        return;
+    }
+
+    if (std::holds_alternative<cref<zmtp::context>>(context_))
+    {
+        // Extract to temporary to avoid dangling reference after destruction.
+        auto socket = std::move(get_base());
+
+        // ZMTP (native) context is applied to the socket.
+        auto& stream = socket_.emplace<zmtp::stream>(std::move(socket),
+            std::get<cref<zmtp::context>>(context_).get(), role_);
+
+        // Posts handler to socket strand.
+        stream.async_handshake(inbound_,
+            std::bind(&socket::handle_publisher_handshake,
                 shared_from_this(), _1, handler));
         return;
     }
@@ -242,14 +254,14 @@ void socket::handle_detection(const boost_code& ec,
         return;
     }
 
-    constexpr auto size = privacy::stream::detection_size;
+    constexpr auto size = p2ps::stream::detection_size;
     detection_.commit(size);
-    const auto& context = std::get<cref<privacy::context>>(context_).get();
+    const auto& context = std::get<cref<p2ps::context>>(context_).get();
     const auto data = system::pointer_cast<const uint8_t>(detection_.data().data());
     const std::span<const uint8_t> prefix{ data, size };
 
     // A v1 peer is served without upgrade, the buffer retains the prefix.
-    if (privacy::stream::detected_v1(prefix, context.identifier))
+    if (p2ps::stream::detected_v1(prefix, context.identifier))
     {
         handler(error::success);
         return;
@@ -263,7 +275,7 @@ void socket::handle_detection(const boost_code& ec,
     auto socket = std::move(get_base());
 
     // P2PS (bip324) context is applied to the socket.
-    socket_.emplace<privacy::stream>(std::move(socket), context);
+    socket_.emplace<p2ps::stream>(std::move(socket), context);
 
     // Posts handler to socket strand.
     get_p2ps().async_handshake(std::move(key),
@@ -284,6 +296,22 @@ void socket::handle_encrypted_handshake(const boost_code& ec,
 
     const auto code = error::asio_to_error_code(ec);
     if (code == error::unknown) logx("encrypted handshake", ec);
+    handler(code);
+}
+
+void socket::handle_publisher_handshake(const boost_code& ec,
+    const result_handler& handler) NOEXCEPT
+{
+    BC_ASSERT(stranded());
+
+    if (error::asio_is_canceled(ec))
+    {
+        handler(error::operation_canceled);
+        return;
+    }
+
+    const auto code = error::asio_to_error_code(ec);
+    if (code == error::unknown) logx("publisher handshake", ec);
     handler(code);
 }
 

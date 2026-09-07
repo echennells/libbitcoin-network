@@ -153,10 +153,10 @@ BOOST_AUTO_TEST_CASE(net__network_settings__unstarted__expected)
 {
     const logger log{};
     settings set(selection::mainnet);
-    BOOST_REQUIRE_EQUAL(set.threads, 1u);
+    BOOST_REQUIRE_EQUAL(set.threads, 0u);
 
     net net(set, log);
-    BOOST_REQUIRE_EQUAL(net.network_settings().threads, 1u);
+    BOOST_REQUIRE_EQUAL(net.network_settings().threads, 0u);
 }
 
 BOOST_AUTO_TEST_CASE(net__address_count__unstarted__zero)
@@ -165,6 +165,31 @@ BOOST_AUTO_TEST_CASE(net__address_count__unstarted__zero)
     const settings set(selection::mainnet);
     net net(set, log);
     BOOST_REQUIRE_EQUAL(net.address_count(), 0u);
+}
+
+BOOST_AUTO_TEST_CASE(net__address_counts__unstarted__zeros)
+{
+    const logger log{};
+    const settings set(selection::mainnet);
+    net net(set, log);
+    BOOST_REQUIRE(net.address_counts() == config::address_counts{});
+}
+
+BOOST_AUTO_TEST_CASE(net__dump_addresses__unstarted__service_stopped)
+{
+    const logger log{};
+    const settings set(selection::mainnet);
+    net net(set, log);
+
+    std::promise<std::pair<code, address_cptr>> promise{};
+    net.dump_addresses([&](const code& ec, const address_cptr& message) NOEXCEPT
+    {
+        promise.set_value({ ec, message });
+    });
+
+    const auto result = promise.get_future().get();
+    BOOST_REQUIRE_EQUAL(result.first, error::service_stopped);
+    BOOST_REQUIRE(!result.second);
 }
 
 BOOST_AUTO_TEST_CASE(net__channel_count__unstarted__zero)

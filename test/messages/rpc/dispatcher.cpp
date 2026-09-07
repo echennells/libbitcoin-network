@@ -39,7 +39,8 @@ struct mock_methods
         method<"with_combine", std::string, nullable<bool>, optional<4.2>>{ "a", "b", "c" },
         method<"not_required", nullable<bool>, optional<4.2>>{ "a", "b" },
         method<"text_options", optional<"a"_t>, optional<"b"_t>>{ "a", "b" },
-        method<"ping", messages::peer::ping::cptr>{ "message" }
+        method<"ping", messages::peer::ping::cptr>{ "message" },
+        method<"with_nullopt", std::string, nullopt<4.2>, nullopt<true>>{ "a", "b", "c" }
     };
 
     template <typename... Args>
@@ -57,6 +58,7 @@ struct mock_methods
     using not_required = at<5>;
     using text_options = at<6>;
     using ping = at<7>;
+    using with_nullopt = at<8>;
 };
 
 using mock_interface = publish<mock_methods>;
@@ -805,6 +807,116 @@ BOOST_AUTO_TEST_CASE(dispatcher__notify__not_required_named_params__expected)
     BOOST_REQUIRE(!ec4);
     BOOST_REQUIRE_EQUAL(result_a, true);
     BOOST_REQUIRE_EQUAL(result_b, 4.2);
+    instance.stop(error::service_stopped);
+}
+
+//  method<"with_nullopt", std::string, nullopt<4.2>, nullopt<true>>{ "a", "b", "c" },
+
+BOOST_AUTO_TEST_CASE(dispatcher__notify__with_nullopt_positional_params__expected)
+{
+    distributor_mock instance{};
+    size_t called{};
+    number_t result_b{};
+    boolean_type result_c{};
+
+    instance.subscribe(
+        [&](const code&, mock_interface::with_nullopt, const std::string&, double b, bool c)
+        {
+            ++called;
+            result_b = b;
+            result_c = c;
+            return true;
+        });
+
+    const auto ec1 = instance.notify(
+    {
+        .method = "with_nullopt",
+        .params = { array_t{ string_t{ "a" }, null_t{}, null_t{} } }
+    });
+
+    BOOST_REQUIRE(!ec1);
+    BOOST_REQUIRE_EQUAL(result_b, 4.2);
+    BOOST_REQUIRE_EQUAL(result_c, true);
+
+    const auto ec2 = instance.notify(
+    {
+        .method = "with_nullopt",
+        .params = { array_t{ string_t{ "a" } } }
+    });
+
+    BOOST_REQUIRE(!ec2);
+    BOOST_REQUIRE_EQUAL(result_b, 4.2);
+    BOOST_REQUIRE_EQUAL(result_c, true);
+
+    const auto ec3 = instance.notify(
+    {
+        .method = "with_nullopt",
+        .params = { array_t{ string_t{ "a" }, null_t{}, boolean_type{ false } } }
+    });
+
+    BOOST_REQUIRE(!ec3);
+    BOOST_REQUIRE_EQUAL(result_b, 4.2);
+    BOOST_REQUIRE_EQUAL(result_c, false);
+
+    const auto ec4 = instance.notify(
+    {
+        .method = "with_nullopt",
+        .params = { array_t{ string_t{ "a" }, number_t{ 42.0 }, null_t{} } }
+    });
+
+    BOOST_REQUIRE(!ec4);
+    BOOST_REQUIRE_EQUAL(result_b, 42.0);
+    BOOST_REQUIRE_EQUAL(result_c, true);
+    BOOST_REQUIRE_EQUAL(called, 4u);
+    instance.stop(error::service_stopped);
+}
+
+BOOST_AUTO_TEST_CASE(dispatcher__notify__with_nullopt_named_params__expected)
+{
+    distributor_mock instance{};
+    size_t called{};
+    number_t result_b{};
+    boolean_type result_c{};
+
+    instance.subscribe(
+        [&](const code&, mock_interface::with_nullopt, const std::string&, double b, bool c)
+        {
+            ++called;
+            result_b = b;
+            result_c = c;
+            return true;
+        });
+
+    const auto ec1 = instance.notify(
+    {
+        .method = "with_nullopt",
+        .params = { object_t{ { "a", string_t{ "a" } }, { "b", null_t{} }, { "c", null_t{} } } }
+    });
+
+    BOOST_REQUIRE(!ec1);
+    BOOST_REQUIRE_EQUAL(result_b, 4.2);
+    BOOST_REQUIRE_EQUAL(result_c, true);
+
+    const auto ec2 = instance.notify(
+    {
+        .method = "with_nullopt",
+        .params = { object_t{ { "a", string_t{ "a" } } } }
+    });
+
+    BOOST_REQUIRE(!ec2);
+    BOOST_REQUIRE_EQUAL(result_b, 4.2);
+    BOOST_REQUIRE_EQUAL(result_c, true);
+
+    const auto ec3 = instance.notify(
+    {
+        .method = "with_nullopt",
+        .params = { object_t{ { "a", string_t{ "a" } }, { "c", boolean_type{ false } } } }
+    });
+
+    BOOST_REQUIRE(!ec3);
+    BOOST_REQUIRE_EQUAL(result_b, 4.2);
+    BOOST_REQUIRE_EQUAL(result_c, false);
+    BOOST_REQUIRE_EQUAL(called, 3u);
     instance.stop(error::service_stopped);
 }
 

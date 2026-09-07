@@ -47,6 +47,7 @@
 #include <bitcoin/network/channels/channel_rpc.hpp>
 #include <bitcoin/network/channels/channels.hpp>
 #include <bitcoin/network/config/address.hpp>
+#include <bitcoin/network/config/address_type.hpp>
 #include <bitcoin/network/config/authority.hpp>
 #include <bitcoin/network/config/config.hpp>
 #include <bitcoin/network/config/credential.hpp>
@@ -142,10 +143,10 @@
 #include <bitcoin/network/net/net.hpp>
 #include <bitcoin/network/net/proxy.hpp>
 #include <bitcoin/network/net/socket.hpp>
-#include <bitcoin/network/privacy/cipher.hpp>
-#include <bitcoin/network/privacy/context.hpp>
-#include <bitcoin/network/privacy/privacy.hpp>
-#include <bitcoin/network/privacy/stream.hpp>
+#include <bitcoin/network/p2ps/cipher.hpp>
+#include <bitcoin/network/p2ps/context.hpp>
+#include <bitcoin/network/p2ps/p2ps.hpp>
+#include <bitcoin/network/p2ps/stream.hpp>
 #include <bitcoin/network/protocols/protocol.hpp>
 #include <bitcoin/network/protocols/protocol_address_in_209.hpp>
 #include <bitcoin/network/protocols/protocol_address_out_209.hpp>
@@ -300,5 +301,10 @@
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/wc_port.h>
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/wolfmath.h>
 #endif
+#include <bitcoin/network/zmtp/cipher.hpp>
+#include <bitcoin/network/zmtp/context.hpp>
+#include <bitcoin/network/zmtp/role.hpp>
+#include <bitcoin/network/zmtp/stream.hpp>
+#include <bitcoin/network/zmtp/zmtp.hpp>
 
 #endif

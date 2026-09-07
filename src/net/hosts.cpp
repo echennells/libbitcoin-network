@@ -121,6 +121,7 @@ code hosts::stop() NOEXCEPT
     LOGN("Saved (" << buffer_.size() << ") addresses.");
     buffer_.clear();
     hosts_count_.store(zero);
+    for (auto& count: counts_) count.store(zero);
     return error::success;
 }
 
@@ -130,6 +131,15 @@ code hosts::stop() NOEXCEPT
 size_t hosts::count() const NOEXCEPT
 {
     return hosts_count_.load();
+}
+
+config::address_counts hosts::counts() const NOEXCEPT
+{
+    config::address_counts out{};
+    std::transform(counts_.begin(), counts_.end(), out.begin(),
+        [](const auto& count) NOEXCEPT { return count.load(); });
+
+    return out;
 }
 
 size_t hosts::reserved() const NOEXCEPT
@@ -187,7 +197,7 @@ void hosts::restore(const address_item_cptr& host,
     }
 
     // O(1).
-    buffer_.push_back(*host);
+    push(*host);
     hosts_count_.store(buffer_.size());
     handler(error::success);
 }
@@ -211,13 +221,13 @@ void hosts::fetch(address_handler&& handler) const NOEXCEPT
     }
 
     // Vary the return count (quantity fingerprinting).
-    const auto divide = pseudo_random::next<size_t>(
+    const auto divide = maybe_random::next<size_t>(
         settings_.address_lower, settings_.address_upper);
     const auto size = std::min(messages::peer::max_address, buffer_.size() / divide);
 
     // Vary the start position (value fingerprinting).
     const auto limit = sub1(buffer_.size());
-    auto index = pseudo_random::next(zero, limit);
+    auto index = maybe_random::next(zero, limit);
 
     // Allocate non-const message (converted to const by return).
     const auto out = to_shared<messages::peer::address>();
@@ -255,7 +265,7 @@ void hosts::save(const address_cptr& message, count_handler&& handler) NOEXCEPT
         if (!insufficient(host) && !is_reserved({ host }) && !is_pooled(host))
         {
             // O(1).
-            buffer_.push_back(host);
+            push(host);
             hosts_count_.store(buffer_.size());
         }
     }
@@ -273,7 +283,31 @@ inline address_item::cptr hosts::pop() NOEXCEPT
 
     const auto host = to_shared<address_item>(std::move(buffer_.front()));
     buffer_.pop_front();
+    decrement(host->ip);
     return host;
+}
+
+// O(1).
+inline void hosts::push(const address_item& host) NOEXCEPT
+{
+    // Circular buffer push evicts the oldest element when full.
+    if (buffer_.full())
+        decrement(buffer_.front().ip);
+
+    buffer_.push_back(host);
+    increment(host.ip);
+}
+
+// O(1).
+inline void hosts::increment(const ip_address& ip) NOEXCEPT
+{
+    ++counts_.at(to_value(config::to_address_type(ip)));
+}
+
+// O(1).
+inline void hosts::decrement(const ip_address& ip) NOEXCEPT
+{
+    --counts_.at(to_value(config::to_address_type(ip)));
 }
 
 // O(1).
@@ -314,7 +348,7 @@ inline void hosts::push(const std::string& line) NOEXCEPT
         }
         else
         {
-            buffer_.push_back(item);
+            push(item);
             ////LOGF("Address excluded upon load [" << line << "].");
         }
     }

@@ -31,12 +31,13 @@ BOOST_AUTO_TEST_CASE(settings__construct__default__expected)
     settings instance{ system::chain::selection::mainnet };
 
     // [network]
-    BOOST_REQUIRE_EQUAL(instance.threads, 1u);
+    BOOST_REQUIRE_EQUAL(instance.threads, 0u);
+    BOOST_REQUIRE_EQUAL(instance.threads_(), std::min<size_t>(cores(), 32));
     BOOST_REQUIRE_EQUAL(instance.address_upper, 10u);
     BOOST_REQUIRE_EQUAL(instance.address_lower, 5u);
     BOOST_REQUIRE_EQUAL(instance.protocol_maximum, level::maximum_protocol);
     BOOST_REQUIRE_EQUAL(instance.protocol_minimum, level::minimum_protocol);
-    BOOST_REQUIRE_EQUAL(instance.invalid_services, 176u);
+    BOOST_REQUIRE_EQUAL(instance.invalid_services, 268'435'632u);
     BOOST_REQUIRE_EQUAL(instance.enable_privacy, false);
     BOOST_REQUIRE_EQUAL(instance.enable_address, false);
     BOOST_REQUIRE_EQUAL(instance.enable_address_v2, false);

@@ -18,9 +18,6 @@
  */
 #include <bitcoin/network/net.hpp>
 
-#include <algorithm>
-#include <memory>
-#include <utility>
 #include <bitcoin/network/async/async.hpp>
 #include <bitcoin/network/channels/channels.hpp>
 #include <bitcoin/network/config/config.hpp>
@@ -43,8 +40,8 @@ using namespace std::placeholders;
 net::net(const settings& settings, const logger& log,
     uint64_t required_services) NOEXCEPT
   : settings_(settings),
-    encryption_{ settings.identifier },
-    threadpool_(std::max(settings.threads, 1_u32)),
+    p2ps_{ settings.identifier },
+    threadpool_(settings.threads_()),
     strand_(threadpool_.service().get_executor()),
     hosts_(settings, log, required_services),
     reporter(log)
@@ -85,7 +82,7 @@ acceptor::ptr net::create_acceptor(const socket::context& context) NOEXCEPT
     // bip324 (v2) inbound acceptance, v1 peers detected and passed through.
     const auto accept = settings.enable_privacy &&
         std::holds_alternative<std::monostate>(context) ?
-            socket::context{ std::cref(encryption_) } : context;
+            socket::context{ std::cref(p2ps_) } : context;
 
     socket::parameters params
     {
@@ -110,7 +107,7 @@ connector::ptr net::create_connector(const settings::socks5& socks,
     };
 
     if (network_settings().enable_privacy)
-        params.context = std::cref(encryption_);
+        params.context = std::cref(p2ps_);
 
     if (socks.proxied())
         return emplace_shared<connector_socks>(log, strand(), service(),
@@ -311,10 +308,11 @@ void net::suspend(const code&) NOEXCEPT
     suspend_connectors();
 }
 
-void net::resume() NOEXCEPT
+bool net::resume() NOEXCEPT
 {
     resume_acceptors();
     resume_connectors();
+    return true;
 }
 
 bool net::suspended() const NOEXCEPT
@@ -532,12 +530,25 @@ void net::do_connect_handled(const config::endpoint& endpoint,
         handler(error::service_stopped, nullptr);
 }
 
+// P2P Administration.
+// ----------------------------------------------------------------------------
+
+void net::dump_addresses(address_handler&& handler) NOEXCEPT
+{
+    fetch(std::move(handler));
+}
+
 // P2P Properties.
 // ----------------------------------------------------------------------------
 
 size_t net::address_count() const NOEXCEPT
 {
     return hosts_.count();
+}
+
+config::address_counts net::address_counts() const NOEXCEPT
+{
+    return hosts_.counts();
 }
 
 size_t net::reserved_count() const NOEXCEPT

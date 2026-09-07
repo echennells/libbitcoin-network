@@ -18,7 +18,6 @@
  */
 #include <bitcoin/network/net/proxy.hpp>
 
-#include <utility>
 #include <bitcoin/network/define.hpp>
 #include <bitcoin/network/log/log.hpp>
 #include <bitcoin/network/net/socket.hpp>
@@ -157,6 +156,8 @@ void proxy::stopping(const code& ec) NOEXCEPT
 
     // Release any http message parse in progress.
     parser_.reset();
+
+    canceler_ = {};
 
     // Post stop handlers to strand and clear/stop accepting subscriptions.
     // The code provides information on the reason that the channel stopped.

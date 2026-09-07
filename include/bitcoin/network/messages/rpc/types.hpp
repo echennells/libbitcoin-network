@@ -19,7 +19,6 @@
 #ifndef LIBBITCOIN_NETWORK_MESSAGES_RPC_TYPES_HPP
 #define LIBBITCOIN_NETWORK_MESSAGES_RPC_TYPES_HPP
 
-#include <memory>
 #include <optional>
 #include <tuple>
 #include <bitcoin/network/define.hpp>
@@ -159,7 +158,20 @@ struct nullable
     using type = Type;
 };
 
-/// is_optional<>, is_nullable<>, is_required<>
+/// nullopt<>
+/// ---------------------------------------------------------------------------
+
+struct nullopt_tag {};
+
+/// Parameter is typed as optional<Default>, defaulted when null_t or missing.
+template <auto Default>
+struct nullopt
+  : optional<Default>
+{
+    using tag = nullopt_tag;
+};
+
+/// is_optional<>, is_nullable<>, is_nullopt<>, is_defaulted<>, is_required<>
 /// ---------------------------------------------------------------------------
 
 template <typename Argument, typename = void>
@@ -177,12 +189,23 @@ template <typename Argument>
 struct is_nullable_t<Argument, std::void_t<typename Argument::tag>>
   : std::is_same<typename Argument::tag, nullable_tag> {};
 
+template <typename Argument, typename = void>
+struct is_nullopt_t : std::false_type {};
+
+template <typename Argument>
+struct is_nullopt_t<Argument, std::void_t<typename Argument::tag>>
+  : std::is_same<typename Argument::tag, nullopt_tag> {};
+
 template <typename Argument>
 constexpr bool is_optional = is_optional_t<Argument>::value;
 template <typename Argument>
 constexpr bool is_nullable = is_nullable_t<Argument>::value;
 template <typename Argument>
-constexpr bool is_required = !is_optional<Argument> && !is_nullable<Argument>;
+constexpr bool is_nullopt = is_nullopt_t<Argument>::value;
+template <typename Argument>
+constexpr bool is_defaulted = is_optional<Argument> || is_nullopt<Argument>;
+template <typename Argument>
+constexpr bool is_required = !is_defaulted<Argument> && !is_nullable<Argument>;
 
 /// internal_t (strip nullable<> and optional<>, wrap shared_ptr<> in any_t).
 /// ---------------------------------------------------------------------------
@@ -224,7 +247,7 @@ struct pointer<std::shared_ptr<const Type>, void>
 template <typename Pointer>
 using pointer_t = typename pointer<Pointer>::type;
 
-/// external_t (nullable<Type> -> std::optional<Type>, optional<Type> -> Type)
+/// external_t (nullable<> -> std::optional<Type>, optional<>/nullopt<> -> Type)
 /// ---------------------------------------------------------------------------
 
 template <typename Argument>

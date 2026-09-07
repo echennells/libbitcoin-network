@@ -20,8 +20,6 @@
 #define LIBBITCOIN_NETWORK_NET_HPP
 
 #include <atomic>
-#include <memory>
-#include <utility>
 #include <bitcoin/network/async/async.hpp>
 #include <bitcoin/network/channels/channels.hpp>
 #include <bitcoin/network/config/config.hpp>
@@ -100,7 +98,7 @@ public:
     virtual void suspend(const code& ec) NOEXCEPT;
 
     /// Resume all P2P connection.
-    virtual void resume() NOEXCEPT;
+    virtual bool resume() NOEXCEPT;
 
     /// Properties.
     /// -----------------------------------------------------------------------
@@ -148,11 +146,20 @@ public:
     virtual void connect(const config::endpoint& endpoint,
         channel_notifier&& handler) NOEXCEPT;
 
+    /// P2P Administration.
+    /// -----------------------------------------------------------------------
+
+    /// Get a randomized subset of pooled addresses.
+    virtual void dump_addresses(address_handler&& handler) NOEXCEPT;
+
     /// P2P Properties.
     /// -----------------------------------------------------------------------
 
     /// Get the number of addresses.
     virtual size_t address_count() const NOEXCEPT;
+
+    /// Get the number of addresses by address type.
+    virtual config::address_counts address_counts() const NOEXCEPT;
 
     /// Get the number of address reservations.
     virtual size_t reserved_count() const NOEXCEPT;
@@ -314,7 +321,7 @@ private:
 
     // These are thread safe.
     const settings& settings_;
-    const privacy::context encryption_{};
+    const p2ps::context p2ps_{};
     std::atomic_bool closed_{ false };
     std::atomic_bool accept_suspended_{ false };
     std::atomic_bool service_suspended_{ false };

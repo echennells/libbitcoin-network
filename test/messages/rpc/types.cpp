@@ -162,6 +162,42 @@ static_assert(!is_nullable<string_t>);
 static_assert(!is_nullable<object_t>);
 static_assert(!is_nullable<array_t>);
 
+// nullopt<Default>
+// ----------------------------------------------------------------------------
+
+static_assert(is_same_type<nullopt<empty::array>::type, array_t>);
+static_assert(is_same_type<nullopt<empty::object>::type, object_t>);
+static_assert(is_same_type<nullopt<empty::value>::type, value_t>);
+static_assert(is_same_type<nullopt<"default"_t>::type, string_t>);
+static_assert(is_same_type<nullopt<true>::type, boolean_type>);
+static_assert(is_same_type<nullopt<42_i32>::type, int32_t>);
+static_assert(is_same_type<nullopt<4.2>::type, number_t>);
+
+static_assert(is_same_type<nullopt<empty::array>::tag, nullopt_tag>);
+static_assert(is_same_type<nullopt<"default"_t>::tag, nullopt_tag>);
+static_assert(is_same_type<nullopt<true>::tag, nullopt_tag>);
+static_assert(is_same_type<nullopt<4.2>::tag, nullopt_tag>);
+
+static_assert(nullopt<4.2>::default_value() == 4.2);
+static_assert(nullopt<true>::default_value());
+static_assert(nullopt<42_i32>::default_value() == 42);
+
+static_assert(is_nullopt<nullopt<empty::array>>);
+static_assert(is_nullopt<nullopt<"default"_t>>);
+static_assert(is_nullopt<nullopt<true>>);
+static_assert(is_nullopt<nullopt<4.2>>);
+
+static_assert(!is_nullopt<optional<4.2>>);
+static_assert(!is_nullopt<nullable<number_t>>);
+static_assert(!is_nullopt<number_t>);
+static_assert(!is_optional<nullopt<4.2>>);
+static_assert(!is_nullable<nullopt<4.2>>);
+
+static_assert(is_defaulted<optional<4.2>>);
+static_assert(is_defaulted<nullopt<4.2>>);
+static_assert(!is_defaulted<nullable<number_t>>);
+static_assert(!is_defaulted<number_t>);
+
 // is_required<Tuple>
 // ----------------------------------------------------------------------------
 
@@ -184,6 +220,11 @@ static_assert(!is_required<nullable<object_t>>);
 static_assert(!is_required<nullable<number_t>>);
 static_assert(!is_required<nullable<string_t>>);
 static_assert(!is_required<nullable<boolean_type>>);
+
+static_assert(!is_required<nullopt<empty::array>>);
+static_assert(!is_required<nullopt<"default"_t>>);
+static_assert(!is_required<nullopt<true>>);
+static_assert(!is_required<nullopt<4.2>>);
 
 static_assert(is_required<array_t>);
 static_assert(is_required<object_t>);
@@ -214,6 +255,11 @@ static_assert(is_same_type<internal_t<boolean_type>, boolean_type>);
 static_assert(is_same_type<internal_t<nullable<boolean_type>>, boolean_type>);
 static_assert(is_same_type<internal_t<optional<true>>, boolean_type>);
 
+static_assert(is_same_type<internal_t<nullopt<empty::array>>, array_t>);
+static_assert(is_same_type<internal_t<nullopt<4.2>>, number_t>);
+static_assert(is_same_type<internal_t<nullopt<"42"_t>>, string_t>);
+static_assert(is_same_type<internal_t<nullopt<true>>, boolean_type>);
+
 // external_t<Argument>
 // ----------------------------------------------------------------------------
 
@@ -237,6 +283,11 @@ static_assert(is_same_type<external_t<boolean_type>, boolean_type>);
 static_assert(is_same_type<external_t<nullable<boolean_type>>, std::optional<boolean_type>>);
 static_assert(is_same_type<external_t<optional<true>>, boolean_type>);
 
+static_assert(is_same_type<external_t<nullopt<empty::array>>, array_t>);
+static_assert(is_same_type<external_t<nullopt<4.2>>, number_t>);
+static_assert(is_same_type<external_t<nullopt<"42"_t>>, string_t>);
+static_assert(is_same_type<external_t<nullopt<true>>, boolean_type>);
+
 // externals_t<Arguments>
 // ----------------------------------------------------------------------------
 
@@ -246,6 +297,7 @@ static_assert(is_same_tuple<externals_t<std::tuple<array_t, object_t>>, std::tup
 static_assert(is_same_tuple<externals_t<std::tuple<optional<true>, optional<42>>>, std::tuple<bool, int>>);
 static_assert(is_same_tuple<externals_t<std::tuple<nullable<bool>, nullable<double>>>, std::tuple<std::optional<bool>, std::optional<double>>>);
 static_assert(is_same_tuple<externals_t<std::tuple<optional<true>, nullable<double>, optional<empty::array>>>, std::tuple<bool, std::optional<double>, array_t>>);
+static_assert(is_same_tuple<externals_t<std::tuple<nullopt<true>, nullable<double>, nullopt<empty::array>>>, std::tuple<bool, std::optional<double>, array_t>>);
 
 // externals_t does not decay
 static_assert(is_same_tuple<externals_t<std::tuple<const bool>>, std::tuple<bool>>);
@@ -267,6 +319,10 @@ static_assert(!only_trailing_unrequireds<bool, optional<true>, bool>);
 static_assert(!only_trailing_unrequireds<optional<true>, optional<42u>, bool>);
 
 static_assert( only_trailing_unrequireds<nullable<bool>>);
+static_assert( only_trailing_unrequireds<nullopt<true>>);
+static_assert( only_trailing_unrequireds<bool, nullopt<true>, optional<4.2>>);
+static_assert( only_trailing_unrequireds<bool, optional<true>, nullopt<4.2>>);
+static_assert(!only_trailing_unrequireds<nullopt<true>, bool>);
 static_assert( only_trailing_unrequireds<bool, nullable<bool>>);
 static_assert( only_trailing_unrequireds<int, bool, nullable<bool>>);
 static_assert( only_trailing_unrequireds<nullable<bool>, nullable<int32_t>>);
