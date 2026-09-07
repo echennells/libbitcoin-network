@@ -257,13 +257,16 @@ inline code CLASS::notify(subscriber_t<Method>& subscriber,
 
 TEMPLATE
 template <size_t Index>
-inline code CLASS::functor(dispatcher& self,
+inline code CLASS::functor(bool& dispatched, dispatcher& self,
     const parameters_t& params) NOEXCEPT
 {
-    // Get method (type), suscriber, and parameter names from the index.
+    // Get method (type), subscriber, and parameter names from the index.
     using method = method_t<Index, methods_t>;
     auto& subscriber = std::get<Index>(self.subscribers_);
     const auto& names = std::get<Index>(Interface::methods).parameter_names();
+
+    // Notify of an empty subscriber list is a silent no-op.
+    dispatched = !subscriber.empty();
 
     // Invoke subscriber.notify(error::success, ordered-or-named-parameters).
     return notify<method>(subscriber, params, names);
@@ -363,10 +366,23 @@ bool CLASS::contains(const std::string& method) NOEXCEPT
 TEMPLATE
 inline code CLASS::notify(const request_t& request) NOEXCEPT
 {
+    bool unused{};
+    return notify(unused, request);
+}
+
+TEMPLATE
+inline code CLASS::notify(bool& dispatched,
+    const request_t& request) NOEXCEPT
+{
     // Search unordered map by method name for the notify() functor.
     const auto it = this->notifiers_.find(request.method);
-    return it == this->notifiers_.end() ? error::unexpected_method :
-        it->second(*this, request.params);
+    if (it == this->notifiers_.end())
+    {
+        dispatched = false;
+        return error::unexpected_method;
+    }
+
+    return it->second(dispatched, *this, request.params);
 }
 
 BC_POP_WARNING()
