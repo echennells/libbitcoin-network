@@ -367,6 +367,18 @@ BOOST_AUTO_TEST_CASE(settings__http_server__defaults__expected)
     BOOST_REQUIRE_EQUAL(config::credential{ ":" }.digest(), digest);
 }
 
+BOOST_AUTO_TEST_CASE(settings__http_server__origin_names__origins_not_hosts)
+{
+    constexpr auto name = "test";
+    settings::http_server instance{ name };
+    instance.hosts.emplace_back("host.example:42");
+    instance.origins.emplace_back("origin.example:24");
+    BOOST_REQUIRE_EQUAL(instance.host_names().size(), 1u);
+    BOOST_REQUIRE_EQUAL(instance.host_names().front(), "host.example:42");
+    BOOST_REQUIRE_EQUAL(instance.origin_names().size(), 1u);
+    BOOST_REQUIRE_EQUAL(instance.origin_names().front(), "origin.example:24");
+}
+
 BOOST_AUTO_TEST_CASE(settings__http_server_permitted__unmethoded_credential__all_methods)
 {
     settings::http_server instance{ "test" };
