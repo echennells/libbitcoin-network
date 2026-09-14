@@ -30,6 +30,9 @@ namespace rpc {
 
 /// Methods are a std::tuple of rpc::method<name, args>.
 /// Defines a published interface for use with rpc::dispatcher<>.
+/// A subset (e.g. a handshake) is published by its own methods type, not by
+/// selecting a tuple here, as a reference template argument becomes part of
+/// the mangled name of every dependent template.
 template <typename Methods, grouping Mode = grouping::either>
 struct publish
   : public Methods

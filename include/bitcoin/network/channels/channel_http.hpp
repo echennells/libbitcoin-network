@@ -106,21 +106,24 @@ protected:
     /// Read request buffer (requires strand).
     virtual http::flat_buffer& request_buffer() NOEXCEPT;
 
-    /// Override to set default websocket reader body.
-    virtual http::body::value_type websocket_body() const NOEXCEPT;
+    /// Override to set the preselected reader body.
+    virtual http::body::value_type default_body() const NOEXCEPT;
+
+    /// Override to tolerate json-rpc single value params (electrum laxness).
+    virtual bool lax_params() const NOEXCEPT;
 
     /// Latch authorization from request headers (requires strand).
     virtual void set_authorized(const http::request& request) NOEXCEPT;
 
     /// Dispatch request to subscribers by verb type.
-    virtual void dispatch(const http::request_cptr& request) NOEXCEPT;
+    virtual void dispatch(const http::request_ptr& request) NOEXCEPT;
 
     /// Size and assign response_buffer_ if value type is json or json-rpc.
     virtual void assign_json_buffer(http::response& response) NOEXCEPT;
 
     /// Handlers.
     virtual void handle_receive(const code& ec, size_t bytes,
-        const http::request_cptr& request) NOEXCEPT;
+        const http::request_ptr& request) NOEXCEPT;
     virtual void handle_send(const code& ec, size_t bytes, bool notification,
         const std::string& message, const result_handler& handler) NOEXCEPT;
 

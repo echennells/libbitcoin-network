@@ -180,6 +180,9 @@
     <ClCompile Include="..\..\..\..\include\bitcoin\network\ssl\wolfcrypt\src\misc.c">
       <Filter>include\bitcoin\network\ssl\wolfcrypt\src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\src\asio.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\src\async\thread.cpp">
       <Filter>src\async</Filter>
     </ClCompile>
@@ -423,9 +426,6 @@
     <ClCompile Include="..\..\..\..\src\net\socket_tcp.cpp">
       <Filter>src\net</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\src\net\socket_wait.cpp">
-      <Filter>src\net</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\src\net\socket_ws.cpp">
       <Filter>src\net</Filter>
     </ClCompile>
@@ -519,7 +519,25 @@
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\evp.c">
       <Filter>src\ssl\wolfssl\src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\evp_pk.c">
+      <Filter>src\ssl\wolfssl\src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\pk.c">
+      <Filter>src\ssl\wolfssl\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\pk_ec.c">
+      <Filter>src\ssl\wolfssl\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_api_cert.c">
+      <Filter>src\ssl\wolfssl\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_api_dtls.c">
+      <Filter>src\ssl\wolfssl\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_api_ext.c">
+      <Filter>src\ssl\wolfssl\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_api_pk.c">
       <Filter>src\ssl\wolfssl\src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_asn1.c">
@@ -779,9 +797,6 @@
     <ClInclude Include="..\..\..\..\include\bitcoin\network\interfaces\peer_dispatch.hpp">
       <Filter>include\bitcoin\network\interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\include\bitcoin\network\interfaces\peer_registry.hpp">
-      <Filter>include\bitcoin\network\interfaces</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\..\include\bitcoin\network\log\capture.hpp">
       <Filter>include\bitcoin\network\log</Filter>
     </ClInclude>
@@ -981,6 +996,9 @@
       <Filter>include\bitcoin\network\messages\peer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\peer\peer.hpp">
+      <Filter>include\bitcoin\network\messages\peer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\peer\registry.hpp">
       <Filter>include\bitcoin\network\messages\peer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\rpc\any.hpp">
@@ -1487,6 +1505,15 @@
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\siphash.h">
       <Filter>include\bitcoin\network\ssl\wolfssl\wolfcrypt</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\sm2.h">
+      <Filter>include\bitcoin\network\ssl\wolfssl\wolfcrypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\sm3.h">
+      <Filter>include\bitcoin\network\ssl\wolfssl\wolfcrypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\sm4.h">
+      <Filter>include\bitcoin\network\ssl\wolfssl\wolfcrypt</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\sp_int.h">
       <Filter>include\bitcoin\network\ssl\wolfssl\wolfcrypt</Filter>
     </ClInclude>
@@ -1506,6 +1533,9 @@
       <Filter>include\bitcoin\network\ssl\wolfssl\wolfcrypt</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\wc_port.h">
+      <Filter>include\bitcoin\network\ssl\wolfssl\wolfcrypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\wc_she.h">
       <Filter>include\bitcoin\network\ssl\wolfssl\wolfcrypt</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\wolfmath.h">

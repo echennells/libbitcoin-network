@@ -122,6 +122,7 @@
   </ImportGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\include\bitcoin\network\ssl\wolfcrypt\src\misc.c" />
+    <ClCompile Include="..\..\..\..\src\asio.cpp" />
     <ClCompile Include="..\..\..\..\src\async\thread.cpp" />
     <ClCompile Include="..\..\..\..\src\async\threadpool.cpp" />
     <ClCompile Include="..\..\..\..\src\async\time.cpp" />
@@ -215,7 +216,6 @@
     <ClCompile Include="..\..\..\..\src\net\socket_rpc.cpp" />
     <ClCompile Include="..\..\..\..\src\net\socket_stop.cpp" />
     <ClCompile Include="..\..\..\..\src\net\socket_tcp.cpp" />
-    <ClCompile Include="..\..\..\..\src\net\socket_wait.cpp" />
     <ClCompile Include="..\..\..\..\src\net\socket_ws.cpp" />
     <ClCompile Include="..\..\..\..\src\net\socket_zmtp.cpp" />
     <ClCompile Include="..\..\..\..\src\p2ps\cipher.cpp">
@@ -251,7 +251,13 @@
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\bio.c" />
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\conf.c" />
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\evp.c" />
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\evp_pk.c" />
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\pk.c" />
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\pk_ec.c" />
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_api_cert.c" />
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_api_dtls.c" />
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_api_ext.c" />
+    <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_api_pk.c" />
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_asn1.c" />
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_bn.c" />
     <ClCompile Include="..\..\..\..\src\ssl\wolfssl\src\ssl_certman.c" />
@@ -347,7 +353,6 @@
     <ClInclude Include="..\..\..\..\include\bitcoin\network\interfaces\interfaces.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\interfaces\peer_broadcast.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\interfaces\peer_dispatch.hpp" />
-    <ClInclude Include="..\..\..\..\include\bitcoin\network\interfaces\peer_registry.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\log\capture.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\log\levels.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\log\log.hpp" />
@@ -415,6 +420,7 @@
     <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\peer\heading.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\peer\message.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\peer\peer.hpp" />
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\peer\registry.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\rpc\any.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\rpc\body.hpp" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\messages\rpc\broadcaster.hpp" />
@@ -583,6 +589,9 @@
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\sha512.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\signature.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\siphash.h" />
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\sm2.h" />
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\sm3.h" />
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\sm4.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\sp_int.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\srp.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\types.h" />
@@ -590,6 +599,7 @@
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\visibility.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\wc_encrypt.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\wc_port.h" />
+    <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\wc_she.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfcrypt\wolfmath.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfio.h" />
     <ClInclude Include="..\..\..\..\include\bitcoin\network\ssl\wolfssl\wolfssl.h" />

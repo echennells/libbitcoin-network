@@ -42,6 +42,9 @@ BC_PUSH_WARNING(NO_VALUE_OR_CONST_REF_SHARED_PTR)
 BC_PUSH_WARNING(SMART_PTR_NOT_NEEDED)
 BC_PUSH_WARNING(NO_THROW_IN_NOEXCEPT)
 
+// Bounds query overrun following caller drop, not response latency.
+constexpr auto watch_interval = milliseconds(10);
+
 // Construct.
 // ----------------------------------------------------------------------------
 
@@ -72,6 +75,7 @@ socket::socket(const logger& log, asio::context& service,
     address_(address),
     endpoint_(endpoint),
     timer_(emplace_shared<deadline>(log, strand_, params.connect_timeout)),
+    watch_(emplace_shared<deadline>(log, strand_, watch_interval)),
     socket_(std::in_place_type<asio::socket>, strand_),
     reporter(log),
     tracker<socket>(log)
@@ -82,6 +86,67 @@ socket::~socket() NOEXCEPT
 {
     BC_ASSERT_MSG(stopped(), "socket is not stopped");
     if (!stopped_.load()) { LOGF("~socket is not stopped."); }
+}
+
+// Wait.
+// ----------------------------------------------------------------------------
+
+void socket::watch(result_handler&& handler) NOEXCEPT
+{
+    boost::asio::dispatch(strand_,
+        std::bind(&socket::do_watch,
+            shared_from_this(), std::move(handler)));
+}
+
+void socket::unwatch() NOEXCEPT
+{
+    boost::asio::dispatch(strand_,
+        std::bind(&socket::do_unwatch,
+            shared_from_this()));
+}
+
+// private
+void socket::do_watch(const result_handler& handler) NOEXCEPT
+{
+    BC_ASSERT(stranded());
+
+    if (stopped_.load())
+    {
+        handler(error::success);
+        return;
+    }
+
+    watch_->start(std::bind(&socket::handle_watch,
+        shared_from_this(), _1, handler));
+}
+
+// private
+void socket::do_unwatch() NOEXCEPT
+{
+    BC_ASSERT(stranded());
+    watch_->stop();
+}
+
+// private
+void socket::handle_watch(const code& ec,
+    const result_handler& handler) NOEXCEPT
+{
+    BC_ASSERT(stranded());
+
+    // Only timer stop results in caller not stopping the channel.
+    if (ec)
+    {
+        handler(error::success);
+        return;
+    }
+
+    if (asio::half_closed(get_base()))
+    {
+        handler(error::peer_disconnect);
+        return;
+    }
+
+    do_watch(handler);
 }
 
 // Properties.
@@ -115,6 +180,16 @@ bool socket::inbound() const NOEXCEPT
 bool socket::websocket() const NOEXCEPT
 {
     return websocket_.load();
+}
+
+bool socket::downgraded() const NOEXCEPT
+{
+    return downgraded_.load();
+}
+
+bool socket::detected() const NOEXCEPT
+{
+    return detected_.load();
 }
 
 const config::address& socket::address() const NOEXCEPT

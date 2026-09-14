@@ -57,7 +57,6 @@
 #include <bitcoin/network/interfaces/interfaces.hpp>
 #include <bitcoin/network/interfaces/peer_broadcast.hpp>
 #include <bitcoin/network/interfaces/peer_dispatch.hpp>
-#include <bitcoin/network/interfaces/peer_registry.hpp>
 #include <bitcoin/network/log/capture.hpp>
 #include <bitcoin/network/log/levels.hpp>
 #include <bitcoin/network/log/log.hpp>
@@ -81,6 +80,7 @@
 #include <bitcoin/network/messages/peer/heading.hpp>
 #include <bitcoin/network/messages/peer/message.hpp>
 #include <bitcoin/network/messages/peer/peer.hpp>
+#include <bitcoin/network/messages/peer/registry.hpp>
 #include <bitcoin/network/messages/peer/detail/address.hpp>
 #include <bitcoin/network/messages/peer/detail/address_item.hpp>
 #include <bitcoin/network/messages/peer/detail/alert.hpp>
@@ -292,6 +292,9 @@
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/sha512.h>
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/signature.h>
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/siphash.h>
+#include <bitcoin/network/ssl/wolfssl/wolfcrypt/sm2.h>
+#include <bitcoin/network/ssl/wolfssl/wolfcrypt/sm3.h>
+#include <bitcoin/network/ssl/wolfssl/wolfcrypt/sm4.h>
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/sp_int.h>
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/srp.h>
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/types.h>
@@ -299,6 +302,7 @@
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/visibility.h>
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/wc_encrypt.h>
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/wc_port.h>
+#include <bitcoin/network/ssl/wolfssl/wolfcrypt/wc_she.h>
 #include <bitcoin/network/ssl/wolfssl/wolfcrypt/wolfmath.h>
 #endif
 #include <bitcoin/network/zmtp/cipher.hpp>

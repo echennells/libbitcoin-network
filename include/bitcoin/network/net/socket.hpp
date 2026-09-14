@@ -91,11 +91,11 @@ public:
     /// Wait (all).
     /// -----------------------------------------------------------------------
 
-    /// Wait on a peer close/cancel/send, no data capture/loss.
-    virtual void wait(result_handler&& handler) NOEXCEPT;
+    /// Monitor the peer for close, handler posted to socket strand.
+    virtual void watch(result_handler&& handler) NOEXCEPT;
 
-    /// Cancel wait or any asynchronous read/write operation, handlers posted.
-    virtual void cancel(result_handler&& handler) NOEXCEPT;
+    /// End monitoring, handler invoked with success.
+    virtual void unwatch() NOEXCEPT;
 
     /// Connect (all).
     /// -----------------------------------------------------------------------
@@ -190,6 +190,11 @@ public:
     using http_parser = boost::beast::http::request_parser<http::body>;
     using http_parser_ptr = std::shared_ptr<http_parser>;
 
+    /// Latch http vs. tcp from buffered bytes, reading only as required to
+    /// decide, handler posted to socket strand. No message is consumed.
+    virtual void detect(http::flat_buffer& buffer,
+        count_handler&& handler) NOEXCEPT;
+
     /// Read http request from the socket, handler posted to socket strand.
     virtual void http_read(http::flat_buffer& buffer, http::request& request,
         count_handler&& handler) NOEXCEPT;
@@ -251,6 +256,12 @@ public:
 
     /// The socket was upgraded to a websocket.
     virtual bool websocket() const NOEXCEPT;
+
+    /// Downgraded from http to tcp by the initial json-rpc request.
+    virtual bool downgraded() const NOEXCEPT;
+
+    /// The transport has been detected (downgraded is otherwise undefined).
+    virtual bool detected() const NOEXCEPT;
 
     /// Get the address of the outgoing endpoint passed via construct, or the
     /// resolved endpoint address for incoming connections.
@@ -432,8 +443,8 @@ private:
     void do_ws_event(ws::frame_type kind, const std::string& data) NOEXCEPT;
 
     // wait
-    void do_wait(const result_handler& handler) NOEXCEPT;
-    void do_cancel(const result_handler& handler) NOEXCEPT;
+    void do_watch(const result_handler& handler) NOEXCEPT;
+    void do_unwatch() NOEXCEPT;
 
     // connection
     void do_connect(const asio::endpoints& range,
@@ -485,6 +496,10 @@ private:
     void do_body_notify(boost_code ec, size_t total,
         const notify_state::ptr& out, const count_handler& handler) NOEXCEPT;
 
+    // detect (first read)
+    void do_detect(const ref<http::flat_buffer>& buffer,
+        const count_handler& handler) NOEXCEPT;
+
     // http
     void do_http_read(ref<http::flat_buffer> buffer,
         const ref<http::request>& request,
@@ -516,8 +531,9 @@ private:
         const std::string& data) NOEXCEPT;
 
     // wait
-    void handle_wait(const boost_code& ec,
+    void handle_watch(const code& ec,
         const result_handler& handler) NOEXCEPT;
+
 
     // connect/accept
     void handle_accept(boost_code ec,
@@ -561,6 +577,11 @@ private:
     void handle_body_notify(const code& ec, size_t size, size_t total,
         const notify_state::ptr& out, const count_handler& handler) NOEXCEPT;
 
+    // detect
+    void handle_detect(const code& ec, size_t size,
+        const ref<http::flat_buffer>& buffer,
+        const count_handler& handler) NOEXCEPT;
+
     // http/ws (native/rpc)
     void handle_http_read(const boost_code& ec, size_t size,
         const ref<http::request>& request, const http_parser_ptr& parser,
@@ -597,11 +618,14 @@ protected:
     const zmtp::role role_;
     std::atomic_bool stopped_{};
     std::atomic_bool websocket_{};
+    std::atomic_bool detected_{};
+    std::atomic_bool downgraded_{};
 
     // These are protected by strand (see also handle_accept).
     config::address address_;
     config::endpoint endpoint_;
     deadline::ptr timer_;
+    deadline::ptr watch_;
     socket_t socket_;
 
     // Retains the detection prefix for a v1 peer (see handle_detection).

@@ -157,8 +157,6 @@ void proxy::stopping(const code& ec) NOEXCEPT
     // Release any http message parse in progress.
     parser_.reset();
 
-    canceler_ = {};
-
     // Post stop handlers to strand and clear/stop accepting subscriptions.
     // The code provides information on the reason that the channel stopped.
     stop_subscriber_.stop(ec);
@@ -274,6 +272,16 @@ bool proxy::encrypted() const NOEXCEPT
 bool proxy::websocket() const NOEXCEPT
 {
     return socket_->websocket();
+}
+
+bool proxy::downgraded() const NOEXCEPT
+{
+    return socket_->downgraded();
+}
+
+bool proxy::detected() const NOEXCEPT
+{
+    return socket_->detected();
 }
 
 code proxy::accept_websocket(const http::request& request) NOEXCEPT

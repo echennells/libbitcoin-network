@@ -108,6 +108,12 @@ public:
     /// The socket was upgraded to a websocket.
     bool websocket() const NOEXCEPT;
 
+    /// Downgraded from http to tcp by the initial json-rpc request.
+    bool downgraded() const NOEXCEPT;
+
+    /// The transport has been detected (downgraded is otherwise undefined).
+    bool detected() const NOEXCEPT;
+
     /// The total number of bytes queued/sent to the remote endpoint.
     uint64_t total() const NOEXCEPT;
 
@@ -144,11 +150,11 @@ protected:
     /// Wait.
     /// -----------------------------------------------------------------------
 
-    /// Wait on a peer close/cancel/send, no data capture/loss.
-    virtual void wait(result_handler&& handler) NOEXCEPT;
+    /// Monitor the peer for close, no data capture/loss.
+    virtual void watch(result_handler&& handler) NOEXCEPT;
 
-    /// Cancel wait, deferred past any write in flight, handler posted.
-    virtual void cancel(result_handler&& handler) NOEXCEPT;
+    /// End monitoring, handler invoked with success.
+    virtual void unwatch() NOEXCEPT;
 
     /// WS (generic, framed).
     /// -----------------------------------------------------------------------
@@ -254,7 +260,19 @@ private:
     void handle_stop_write(const code& ec, size_t bytes,
         const code& reason) NOEXCEPT;
 
+    // For http vs. tcp transport detection.
+    void handle_detect(const code& ec, size_t bytes,
+        const ref<http::request>& request, const ref<http::flat_buffer>& buffer,
+        const count_handler& handler) NOEXCEPT;
+
     // For rpc batch normalization (http).
+    void do_rpc_request_read(const ref<rpc::request>& request,
+        const ref<http::flat_buffer>& buffer,
+        const count_handler& handler) NOEXCEPT;
+    void do_downgrade_read(const ref<http::request>& request,
+        const ref<http::flat_buffer>& buffer,
+        const count_handler& handler) NOEXCEPT;
+
     void do_http_request_read(const ref<http::request>& request,
         const ref<http::flat_buffer>& buffer,
         const count_handler& handler) NOEXCEPT;
@@ -297,7 +315,6 @@ private:
     deadline::ptr throttle_;
     stop_subscriber stop_subscriber_{};
     socket::http_parser_ptr parser_{};
-    result_handler canceler_{};
     queue deferred_{};
     bool writing_{};
     queue queue_{};
