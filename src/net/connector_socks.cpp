@@ -340,7 +340,10 @@ void connector_socks::do_socks_connect_write(
 
     const auto& endpoint = socket->endpoint();
     const config::address address = endpoint;
-    const auto host_length = address ? (address.is_v4() ? 4u : 16u) :
+
+    // Tor and i2p names parse as addresses but have no ip.
+    const auto numeric = address && (address.is_v4() || address.is_v6());
+    const auto host_length = numeric ? (address.is_v4() ? 4u : 16u) :
         add1(endpoint.host().length());
 
     // Socks5 limits valid host lengths to one byte.
@@ -363,7 +366,7 @@ void connector_socks::do_socks_connect_write(
     *it++ = socks::reserved;
 
     // BUGBUG: this always sees v4 addresses as v6.
-    if (address)
+    if (numeric)
     {
         ////const auto native = config::from_address(address.ip());
         const auto port = to_big_endian(address.port());
