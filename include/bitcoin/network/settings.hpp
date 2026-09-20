@@ -330,6 +330,11 @@ struct BCT_API settings
                     break;
                 }
                 case system::chain::selection::regtest:
+                {
+                    // Regtest is private network only, so there is no seeding.
+                    connections = 0;
+                    break;
+                }
                 default: break;
             }
         }

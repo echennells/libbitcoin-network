@@ -466,6 +466,13 @@ BOOST_AUTO_TEST_CASE(settings__peer_outbound__mainnet__expected)
     BOOST_REQUIRE(instance.seeding_timeout() == seconds(30));
 }
 
+BOOST_AUTO_TEST_CASE(settings__peer_outbound__regtest__expected)
+{
+    const settings::peer_outbound instance{ system::chain::selection::regtest };
+    BOOST_REQUIRE_EQUAL(instance.connections, 0u);
+    BOOST_REQUIRE(instance.seeds.empty());
+}
+
 // gossip
 
 BOOST_AUTO_TEST_CASE(settings__gossip__default__ipv4_only)
