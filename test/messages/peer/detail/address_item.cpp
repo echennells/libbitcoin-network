@@ -355,12 +355,14 @@ BOOST_AUTO_TEST_CASE(address_item__deserialize__ipv6__expected)
     BOOST_REQUIRE(item.address == address_t{ ipv6_t{ expected } });
 }
 
-BOOST_AUTO_TEST_CASE(address_item__deserialize__onion_cat__invalid)
+BOOST_AUTO_TEST_CASE(address_item__deserialize__onion_cat__unspecified)
 {
     constexpr auto payload = base16_array("785634120100000000000000fd87d87eeb43f1f2f3f4f5f6f7f8f9fa208d");
     system::read::bytes::copy source(payload);
-    address_item::deserialize(level::minimum_protocol, source, true);
-    BOOST_REQUIRE(!source);
+    const auto item = address_item::deserialize(level::minimum_protocol, source, true);
+    BOOST_REQUIRE(source);
+    BOOST_REQUIRE(is_unspecified(item.address));
+    BOOST_REQUIRE(!is_specified(item));
 }
 
 BOOST_AUTO_TEST_CASE(address_item__deserialize__documentation__unspecified)
@@ -520,12 +522,15 @@ BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__ipv6__expected)
     BOOST_REQUIRE(item.address == address_t{ ipv6_t{ v2_ipv6 } });
 }
 
-BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__torv2__invalid)
+BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__torv2__unspecified_and_consumed)
 {
     constexpr auto payload = base16_array("7856341201030af1f2f3f4f5f6f7f8f9fa208d");
     system::read::bytes::copy source(payload);
-    address_item::deserialize_v2(level::bip155, source);
-    BOOST_REQUIRE(!source);
+    const auto item = address_item::deserialize_v2(level::bip155, source);
+    BOOST_REQUIRE(source);
+    BOOST_REQUIRE(source.is_exhausted());
+    BOOST_REQUIRE(is_unspecified(item.address));
+    BOOST_REQUIRE_EQUAL(item.port, 8333u);
 }
 
 BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__mapped_ipv6__ipv4)
@@ -538,12 +543,15 @@ BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__mapped_ipv6__ipv4)
     BOOST_REQUIRE(item.address == address_t{ ipv4_t{ v2_ipv4 } });
 }
 
-BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__onion_cat_ipv6__invalid)
+BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__onion_cat_ipv6__unspecified)
 {
     constexpr auto payload = base16_array("78563412010210fd87d87eeb43f1f2f3f4f5f6f7f8f9fa208d");
     system::read::bytes::copy source(payload);
-    address_item::deserialize_v2(level::bip155, source);
-    BOOST_REQUIRE(!source);
+    const auto item = address_item::deserialize_v2(level::bip155, source);
+    BOOST_REQUIRE(source);
+    BOOST_REQUIRE(source.is_exhausted());
+    BOOST_REQUIRE(is_unspecified(item.address));
+    BOOST_REQUIRE(!is_specified(item));
 }
 
 BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__documentation_ipv6__unspecified)
@@ -640,6 +648,14 @@ BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__reserved_network__unspecified
 BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__short_ipv4__invalid)
 {
     constexpr auto payload = base16_array("78563412010103010203208d");
+    system::read::bytes::copy source(payload);
+    address_item::deserialize_v2(level::bip155, source);
+    BOOST_REQUIRE(!source);
+}
+
+BOOST_AUTO_TEST_CASE(address_item__deserialize_v2__short_torv2__invalid)
+{
+    constexpr auto payload = base16_array("78563412010309f1f2f3f4f5f6f7f8f9208d");
     system::read::bytes::copy source(payload);
     address_item::deserialize_v2(level::bip155, source);
     BOOST_REQUIRE(!source);
