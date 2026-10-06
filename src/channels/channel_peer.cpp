@@ -86,6 +86,22 @@ void channel_peer::set_wants_address_v2() NOEXCEPT
     wants_address_v2_ = true;
 }
 
+bool channel_peer::accepts_compact_blocks() const NOEXCEPT
+{
+    return accepts_compact_blocks_;
+}
+
+bool channel_peer::wants_compact_blocks() const NOEXCEPT
+{
+    return wants_compact_blocks_;
+}
+
+void channel_peer::set_compact_blocks(bool high_bandwidth) NOEXCEPT
+{
+    accepts_compact_blocks_ = true;
+    wants_compact_blocks_ = high_bandwidth;
+}
+
 bool channel_peer::is_negotiated(messages::peer::level level) const NOEXCEPT
 {
     return negotiated_version() >= level;
@@ -328,6 +344,9 @@ void channel_peer::handle_send(const code& ec, size_t size, size_t index,
         ec != error::peer_disconnect &&
         ec != error::operation_canceled &&
         ec != error::connect_failed &&
+        ec != error::net_unreachable &&
+        ec != error::host_unreachable &&
+        ec != error::connection_refused &&
         index < registry::size)
     {
         LOGF("Send failure " << registry::commands().at(index) << " to ["
