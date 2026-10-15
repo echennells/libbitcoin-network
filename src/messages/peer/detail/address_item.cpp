@@ -101,10 +101,6 @@ address_item address_item::deserialize(uint32_t, reader& source,
     const auto ip = read_forward<ip_address_size>(source);
     const auto port = source.read_2_bytes_big_endian();
 
-    // Tor v2 is not operational, so advertising it is a protocol fault.
-    if (is_torv2(ip))
-        source.invalidate();
-
     // A documentation address is never assigned, so it is discarded.
     const auto address = is_documentation(ip) ? address_t{} : to_address(ip);
     return { timestamp, services, address, port };
@@ -160,10 +156,7 @@ static address_t read_address(size_t size, reader& source) NOEXCEPT
             return ipv4_t{ out.value };
 
         if (is_torv2(out.value))
-        {
-            source.invalidate();
             return {};
-        }
     }
 
     // A cjdns address is always within the cjdns range.
@@ -176,7 +169,11 @@ static address_t read_address(size_t size, reader& source) NOEXCEPT
         }
     }
 
-    return out;
+    // Tor v2 is not operational, and must be ignored on receive.
+    if constexpr (Id == torv2_t::id)
+        return {};
+    else
+        return out;
 }
 
 static address_t read_address(reader& source) NOEXCEPT
@@ -188,14 +185,10 @@ static address_t read_address(reader& source) NOEXCEPT
     {
         case ipv4_t::id: return read_address<ipv4_t::id>(size, source);
         case ipv6_t::id: return read_address<ipv6_t::id>(size, source);
+        case torv2_t::id: return read_address<torv2_t::id>(size, source);
         case torv3_t::id: return read_address<torv3_t::id>(size, source);
         case i2p_t::id: return read_address<i2p_t::id>(size, source);
         case cjdns_t::id: return read_address<cjdns_t::id>(size, source);
-
-        // Tor v2 is not operational, so advertising it is a protocol fault.
-        case torv2_t::id:
-            source.invalidate();
-            return {};
 
         // Unknown networks are discarded, not rejected (forward compatible).
         default:
