@@ -144,6 +144,17 @@ BOOST_AUTO_TEST_CASE(http_body_reader__init__default_body_text_plain__constructs
     BOOST_REQUIRE(std::holds_alternative<string_reader>(reader.reader_));
 }
 
+BOOST_AUTO_TEST_CASE(http_body_reader__init__default_body_absent__constructs_data_reader)
+{
+    message_header<true, fields> header{};
+    body::value_type value{};
+    accessor reader(header, value);
+    length_type length{ max_size_t };
+    boost_code ec{};
+    reader.init(length, ec);
+    BOOST_REQUIRE(std::holds_alternative<data_reader>(reader.reader_));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 ///#endif // HAVE_SLOW_TESTS
