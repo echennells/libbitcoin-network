@@ -192,7 +192,15 @@ struct BCT_API body
             // Allows for preselection of reader for non-http reads.
             if (!value_.has_value())
             {
-                switch (http::content_media_type(header))
+                // Field dereference is not noexcept but does not throw.
+                BC_PUSH_WARNING(NO_THROW_IN_NOEXCEPT)
+                const auto type = header[http::field::content_type];
+                BC_POP_WARNING()
+
+                // An untyped body may be assumed octet-stream (rfc9110 8.3).
+                switch (type.empty() ?
+                    http::media_type::application_octet_stream :
+                    http::content_media_type(type))
                 {
                     case http::media_type::application_json:
                         if (value_.plain_json)

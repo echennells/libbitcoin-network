@@ -992,6 +992,20 @@ BOOST_FIXTURE_TEST_CASE(channel_http__resume__lax_params__jsonrpc_params_not_col
     BOOST_REQUIRE_EQUAL(http_await(stopped), error::jsonrpc_params_not_collection);
 }
 
+BOOST_FIXTURE_TEST_CASE(channel_http__resume__untyped_post__data_body_dispatched, http_channel_fixture)
+{
+    const auto data = std::make_shared<std::promise<bool>>();
+    start([=](const channel_http::ptr& self, const http::request& request) NOEXCEPT
+    {
+        data->set_value(request.body().contains<data_value>());
+        http_ok(self, request);
+    });
+
+    send("POST /tx HTTP/1.1\r\nHost: example.com\r\nContent-Length: 4\r\n\r\n0100");
+    BOOST_REQUIRE_EQUAL(receive().result_int(), 200u);
+    BOOST_REQUIRE(data->get_future().get());
+}
+
 BOOST_FIXTURE_TEST_CASE(channel_http__stop__reading__stopped_with_code, http_channel_fixture)
 {
     start(http_ok);
