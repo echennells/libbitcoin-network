@@ -155,6 +155,54 @@ BOOST_AUTO_TEST_CASE(http_body_reader__init__default_body_absent__constructs_dat
     BOOST_REQUIRE(std::holds_alternative<data_reader>(reader.reader_));
 }
 
+BOOST_AUTO_TEST_CASE(http_body_reader__init__default_body_form_urlencoded__constructs_data_reader)
+{
+    message_header<true, fields> header{};
+    header.set(http::field::content_type, "application/x-www-form-urlencoded");
+    body::value_type value{};
+    accessor reader(header, value);
+    length_type length{ max_size_t };
+    boost_code ec{};
+    reader.init(length, ec);
+    BOOST_REQUIRE(std::holds_alternative<data_reader>(reader.reader_));
+}
+
+BOOST_AUTO_TEST_CASE(http_body_reader__init__default_body_application_xml__constructs_data_reader)
+{
+    message_header<true, fields> header{};
+    header.set(http::field::content_type, "Application/XML; charset=utf-8");
+    body::value_type value{};
+    accessor reader(header, value);
+    length_type length{ max_size_t };
+    boost_code ec{};
+    reader.init(length, ec);
+    BOOST_REQUIRE(std::holds_alternative<data_reader>(reader.reader_));
+}
+
+BOOST_AUTO_TEST_CASE(http_body_reader__init__default_body_application_json_charset__constructs_rpc_reader)
+{
+    message_header<true, fields> header{};
+    header.set(http::field::content_type, "application/json; charset=utf-8");
+    body::value_type value{};
+    accessor reader(header, value);
+    length_type length{ max_size_t };
+    boost_code ec{};
+    reader.init(length, ec);
+    BOOST_REQUIRE(std::holds_alternative<rpc::reader>(reader.reader_));
+}
+
+BOOST_AUTO_TEST_CASE(http_body_reader__init__default_body_text_html__empty_reader)
+{
+    message_header<true, fields> header{};
+    header.set(http::field::content_type, "text/html");
+    body::value_type value{};
+    accessor reader(header, value);
+    length_type length{ max_size_t };
+    boost_code ec{};
+    reader.init(length, ec);
+    BOOST_REQUIRE(std::holds_alternative<empty_reader>(reader.reader_));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 ///#endif // HAVE_SLOW_TESTS
