@@ -197,10 +197,17 @@ struct BCT_API body
                 const auto type = header[http::field::content_type];
                 BC_POP_WARNING()
 
-                // An untyped body may be assumed octet-stream (rfc9110 8.3).
-                switch (type.empty() ?
+                // An untyped body may be assumed octet-stream (rfc9110 8.3),
+                // as may an application type without a reader (rfc2046 4.5.3).
+                auto media = type.empty() ?
                     http::media_type::application_octet_stream :
-                    http::content_media_type(type))
+                    http::content_media_type(type);
+
+                if (media != http::media_type::application_json &&
+                    system::ascii_to_lower(type).starts_with("application/"))
+                    media = http::media_type::application_octet_stream;
+
+                switch (media)
                 {
                     case http::media_type::application_json:
                         if (value_.plain_json)
