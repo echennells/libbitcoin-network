@@ -206,7 +206,7 @@ code settings::tls_server::initialize_context() NOEXCEPT
         return error::operation_failed;
 
     context = std::make_unique<asio::ssl::context>(asio::ssl::version);
-    if (safes.empty())
+    if (safes.empty() || (cert_path.empty() && key_path.empty()))
         return error::success;
 
     if (cert_path.empty())
