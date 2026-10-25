@@ -71,7 +71,7 @@ public:
 
     DELETE_COPY_MOVE(socket);
 
-    /// Inbound connections (handshake is deferred to a proxied acceptor).
+    /// Inbound connections (proxied defers the handshake to the acceptor).
     socket(const logger& log, asio::context& service,
         const parameters& params, bool proxied=false) NOEXCEPT;
 
@@ -379,8 +379,9 @@ private:
     {
         typedef std::shared_ptr<read_state> ptr;
 
-        read_state(http::request& request, http::flat_buffer& buffer) NOEXCEPT
-          : value{ request }, reader{ value.base(), value.body() },
+        read_state(http::request& request, http::flat_buffer& buffer,
+            bool streamed) NOEXCEPT
+          : value{ request }, reader{ value.base(), value.body(), streamed },
             buffer{ buffer }
         {
         }
