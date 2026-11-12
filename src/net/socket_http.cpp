@@ -96,8 +96,23 @@ void socket::do_detect(const ref<http::flat_buffer>& buffer,
         return;
     }
 
-    // Tolerated empty lines only, so read more (bounded by the buffer).
-    async_read(buffer.get(),
+    // Tolerated empty lines only, so read more. Grow by up to the header
+    // limit, as the parse read does, rather than preparing the whole request
+    // buffer. async_read prepares its entire unused capacity, which for a
+    // service channel is maximum_request, so every newly-accepted connection
+    // would allocate that (8MB by default) before sending any payload.
+    auto& in = buffer.get();
+    const auto limit = floored_subtract(in.max_size(), in.size());
+    const auto size = std::min(limit, std::max(in.capacity() - in.size(),
+        header_));
+
+    if (is_zero(size))
+    {
+        handler(error::buffer_overflow, zero);
+        return;
+    }
+
+    async_read_some(in.prepare(size),
         std::bind(&socket::handle_detect,
             shared_from_this(), _1, _2, buffer, handler));
 }
