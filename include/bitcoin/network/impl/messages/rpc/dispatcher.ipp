@@ -19,6 +19,7 @@
 #ifndef LIBBITCOIN_NETWORK_MESSAGES_RPC_DISPATCHER_IPP
 #define LIBBITCOIN_NETWORK_MESSAGES_RPC_DISPATCHER_IPP
 
+#include <algorithm>
 #include <any>
 #include <tuple>
 #include <bitcoin/network/define.hpp>
@@ -178,7 +179,7 @@ inline externals_t<Arguments> CLASS::extract_named(
     if (object.size() > count)
         throw std::system_error{ error::extra_named };
 
-    return [&]<size_t... Index>(std::index_sequence<Index...>) THROWS
+    auto values = [&]<size_t... Index>(std::index_sequence<Index...>) THROWS
     {
         return std::make_tuple
         (
@@ -186,6 +187,17 @@ inline externals_t<Arguments> CLASS::extract_named(
                 names.at(Index), object)...
         );
     }(std::make_index_sequence<count>{});
+
+    const auto unnamed = [&](const auto& member) NOEXCEPT
+    {
+        return std::ranges::find(names, std::string_view{ member.first }) ==
+            names.end();
+    };
+
+    if (std::ranges::any_of(object, unnamed))
+        throw std::system_error{ error::extra_named };
+
+    return values;
 }
 
 TEMPLATE
