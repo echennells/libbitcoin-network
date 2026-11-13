@@ -810,6 +810,32 @@ BC_AUTO_TEST_CASE(dispatcher__notify__not_required_named_params__expected)
     instance.stop(error::service_stopped);
 }
 
+BC_AUTO_TEST_CASE(dispatcher__notify__not_required_named_params_misnamed__extra_named)
+{
+    distributor_mock instance{};
+    instance.subscribe(
+        [&](const code&, mock_interface::not_required, std::optional<bool>, double)
+        {
+            return true;
+        });
+
+    const auto ec1 = instance.notify(
+    {
+        .method = "not_required",
+        .params = { object_t{ { "a", boolean_type{ false } }, { "c", number_t{ 42.0 } } } }
+    });
+
+    const auto ec2 = instance.notify(
+    {
+        .method = "not_required",
+        .params = { object_t{ { "c", number_t{ 42.0 } } } }
+    });
+
+    BC_REQUIRE_EQUAL(ec1, error::extra_named);
+    BC_REQUIRE_EQUAL(ec2, error::extra_named);
+    instance.stop(error::service_stopped);
+}
+
 //  method<"with_nullopt", std::string, nullopt<4.2>, nullopt<true>>{ "a", "b", "c" },
 
 BC_AUTO_TEST_CASE(dispatcher__notify__with_nullopt_positional_params__expected)
