@@ -100,7 +100,7 @@ inline external_t<Argument> CLASS::get_positional(size_t& position,
 
 TEMPLATE
 template <typename Argument>
-inline external_t<Argument> CLASS::get_named(
+inline external_t<Argument> CLASS::get_named(size_t& found,
     const std::string_view& name, const object_t& object) THROWS
 {
     // The parameter is named by any of its aliases.
@@ -116,6 +116,9 @@ inline external_t<Argument> CLASS::get_named(
     // Only optional can be missing.
     if (it == object.end())
         return CLASS::get_missing<Argument>();
+
+    // The member names this parameter.
+    ++found;
 
     // Get contained variant value_t(inner_t).
     const auto& internal = it->second;
@@ -189,14 +192,21 @@ inline externals_t<Arguments> CLASS::extract_named(
     if (object.size() > count)
         throw std::system_error{ error::extra_named };
 
-    return [&]<size_t... Index>(std::index_sequence<Index...>) THROWS
+    size_t found{};
+    auto values = [&]<size_t... Index>(std::index_sequence<Index...>) THROWS
     {
         return std::make_tuple
         (
             CLASS::get_named<std::tuple_element_t<Index, Arguments>>(
-                names.at(Index), object)...
+                found, names.at(Index), object)...
         );
     }(std::make_index_sequence<count>{});
+
+    // Each member must name a parameter.
+    if (found < object.size())
+        throw std::system_error{ error::extra_named };
+
+    return values;
 }
 
 TEMPLATE
