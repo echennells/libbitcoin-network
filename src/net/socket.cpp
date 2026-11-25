@@ -558,8 +558,8 @@ void socket::async_read_some(const io::mutable_buffer& buffer,
     }
 }
 
-// read arbitrary tcp bytes, iterate (up to buffer capacity).
-// read whole ws message in any number of frames (up to buffer capacity).
+// read arbitrary tcp bytes, iterate (up to buffer limit).
+// read whole ws message in any number of frames (up to buffer limit).
 void socket::async_read(http::flat_buffer& buffer,
     const count_handler& handler) NOEXCEPT
 {
@@ -574,15 +574,20 @@ void socket::async_read(http::flat_buffer& buffer,
         }
         else
         {
-            auto remain = floored_subtract(buffer.max_size(), buffer.size());
-            if (is_zero(remain))
+            // Read into available capacity, growing by up to header limit.
+            const auto buffered = buffer.size();
+            const auto limit = floored_subtract(buffer.max_size(), buffered);
+            const auto available = buffer.capacity() - buffered;
+            const auto size = std::min(limit, std::max(available, header_));
+
+            if (is_zero(size))
             {
                 handler(error::buffer_overflow, {});
                 return;
             }
 
             VARIANT_DISPATCH_METHOD(get_tcp(),
-                async_read_some(buffer.prepare(remain),
+                async_read_some(buffer.prepare(size),
                     std::bind(&socket::handle_async, shared_from_this(),
                     _1, _2, handler, "async_read_some")));
         }

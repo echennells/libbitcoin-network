@@ -101,7 +101,7 @@ void proxy::poll(result_handler&& handler) NOEXCEPT
 //  WS (generic, framed).
 // ----------------------------------------------------------------------------
 
-// flat_buffer must have configured max_size, which will be allocated.
+// flat_buffer must have configured max_size.
 void proxy::read(http::flat_buffer& out, count_handler&& handler) NOEXCEPT
 {
     do_reading();
@@ -210,7 +210,7 @@ void proxy::do_peer_write(const frame_ptr& message) NOEXCEPT
 // reads and response parts, absorbs batch close (writing close part and
 // re-arming read), and defers notifications while open.
 
-// flat_buffer must have configured max_size, which will be allocated.
+// flat_buffer must have configured max_size.
 // PING context is second param (first is TTL).
 static rpc::value_t to_context(const rpc::params_option& params) NOEXCEPT
 {
@@ -502,7 +502,7 @@ void proxy::do_notification_write(
 // response header written once with each response part written as chunk data
 // (http has no notifications).
 
-// flat_buffer must have configured max_size, which will be allocated.
+// flat_buffer must have configured max_size.
 void proxy::read(http::flat_buffer& buffer, http::request& request,
     count_handler&& handler) NOEXCEPT
 {

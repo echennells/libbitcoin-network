@@ -260,6 +260,28 @@ BC_FIXTURE_TEST_CASE(socket__detect__peer_close__peer_disconnect, http_loopback_
     BC_REQUIRE(!server->detected());
 }
 
+BC_FIXTURE_TEST_CASE(socket__detect__request_limit_above_header_limit__header_limit_capacity, http_loopback_fixture)
+{
+    http::flat_buffer buffer{ 1'000'000 };
+    const auto result = http_make_promise();
+    server->detect(buffer, http_complete(result));
+
+    send("[");
+    BC_REQUIRE_EQUAL(http_await(result), error::success);
+    BC_REQUIRE_EQUAL(buffer.capacity(), maximum_http_header);
+}
+
+BC_FIXTURE_TEST_CASE(socket__detect__line_breaks_to_request_limit__buffer_overflow, http_loopback_fixture)
+{
+    http::flat_buffer buffer{ 4 };
+    const auto result = http_make_promise();
+    server->detect(buffer, http_complete(result));
+
+    send("\r\n\r\n");
+    BC_REQUIRE_EQUAL(http_await(result), error::buffer_overflow);
+    BC_REQUIRE(!server->detected());
+}
+
 // http_read
 
 BC_FIXTURE_TEST_CASE(socket__http_read__unknown_method__bad_method, http_loopback_fixture)
